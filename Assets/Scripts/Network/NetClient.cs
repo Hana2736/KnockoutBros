@@ -16,10 +16,11 @@ namespace Network
         private static bool resetting;
         private static uint readBufPos;
         public static bool keyRecovered;
+        public static bool isReadyForTicking;
 
         private void Start()
         {
-            if (NetServer.BuiltRunningMode != NetServer.RunningMode.WebSocketClient)
+            if (NetServer.BuiltRunningMode != NetServer.RunningMode.Client)
                 return;
             inMessageQueue = new ();
             outMessageQueue = new();
@@ -32,7 +33,7 @@ namespace Network
 
         private void Update()
         {
-            if (NetServer.BuiltRunningMode != NetServer.RunningMode.WebSocketClient)
+            if (NetServer.BuiltRunningMode != NetServer.RunningMode.Client)
                 return;
 #if !UNITY_WEBGL || UNITY_EDITOR
             sock.DispatchMessageQueue();
@@ -56,7 +57,7 @@ namespace Network
             resetting = true;
             readBuf = new byte[32768];
             readBufPos = 0;
-            sock = new WebSocket("ws://10.119.200.30:2736");
+            sock = new WebSocket("ws://10.210.20.96:2736");
             sock.OnOpen += () => { Debug.Log("Net Connected"); };
             sock.OnClose += code =>
             {

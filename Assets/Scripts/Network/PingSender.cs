@@ -23,7 +23,7 @@ namespace Network
         // Update is called once per frame
         private void Update()
         {
-            if (NetServer.BuiltRunningMode != NetServer.RunningMode.WebSocketClient)
+            if (NetServer.BuiltRunningMode != NetServer.RunningMode.Client)
                 return;
             timer += Time.deltaTime;
             if (timer >= 3)

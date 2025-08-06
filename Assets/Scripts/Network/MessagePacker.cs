@@ -62,12 +62,12 @@ namespace Network
             var messageID = PacketTypes.PacketType.PlayerUpdateMessage;
 
 
-            var messageSize = Marshal.SizeOf<PlayerUpdateMessage>();
+            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 2));
             var retBlock = WriteHeader(messageID, (uint)messageSize);
 
             var structPointer = Marshal.AllocHGlobal(messageSize);
             Marshal.StructureToPtr(message, structPointer, true);
-            Marshal.Copy(structPointer, retBlock, 1, messageSize);
+            Marshal.Copy(structPointer, retBlock, headerLen, messageSize);
             Marshal.FreeHGlobal(structPointer);
 
             return retBlock;
@@ -75,10 +75,10 @@ namespace Network
 
         public static PlayerUpdateMessage UnpackPlayerUpdateMsg(byte[] msg)
         {
-            var messageSize = Marshal.SizeOf<PlayerUpdateMessage>();
+            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 2));
             PlayerUpdateMessage returned;
             var structPointer = Marshal.AllocHGlobal(messageSize);
-            Marshal.Copy(structPointer, msg, headerLen + 1, messageSize);
+            Marshal.Copy(structPointer, msg, headerLen, messageSize);
             returned = Marshal.PtrToStructure<PlayerUpdateMessage>(structPointer);
             Marshal.FreeHGlobal(structPointer);
             return returned;
@@ -119,22 +119,23 @@ namespace Network
             BitConverter.TryWriteBytes(retBlock.AsSpan(1, sizeof(uint)), dataLen);
             return retBlock;
         }
-    }
 
-    public struct PlayerUpdateMessage
-    {
-        public uint playerID;
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public class PlayerUpdateMessage
+        {
+            public uint playerID;
 
-        public float positionX,
-            positionY,
-            positionZ,
-            rotationX,
-            rotationY,
-            rotationZ,
-            velocityX,
-            velocityY,
-            velocityZ;
+            public float positionX,
+                positionY,
+                positionZ,
+                rotationX,
+                rotationY,
+                rotationZ,
+                velocityX,
+                velocityY,
+                velocityZ;
 
-        public float inputX, inputZ;
+            public float inputX, inputZ;
+        }
     }
 }

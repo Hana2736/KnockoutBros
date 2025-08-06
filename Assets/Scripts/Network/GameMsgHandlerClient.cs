@@ -32,7 +32,7 @@ namespace Network
 
         public void HandlePingMsg(byte[] msg)
         {
-            if (NetServer.BuiltRunningMode != NetServer.RunningMode.WebSocketClient)
+            if (NetServer.BuiltRunningMode != NetServer.RunningMode.Client)
                 return;
             // Ping Msg
             var pingID = MessagePacker.UnpackPingMsg(msg);

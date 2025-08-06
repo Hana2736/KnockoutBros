@@ -11,11 +11,11 @@ namespace Network
     {
         public enum RunningMode
         {
-            SocketServer,
-            WebSocketClient
+            Server,
+            Client
         }
 
-        public static RunningMode BuiltRunningMode = RunningMode.SocketServer;
+        public static readonly RunningMode BuiltRunningMode = RunningMode.Server;
 
         public uint nextClientID;
         public ConcurrentDictionary<TcpClient, uint> clientToID;
@@ -30,7 +30,7 @@ namespace Network
 
         public void Start()
         {
-            if (BuiltRunningMode != RunningMode.SocketServer)
+            if (BuiltRunningMode != RunningMode.Server)
                 return;
             StartServer();
         }
@@ -46,7 +46,7 @@ namespace Network
             messageSendQueue = new ConcurrentDictionary<uint, ConcurrentQueue<byte[]>>();
             newClientsForGame = new();
 
-            var tcpListener = new TcpListener(IPAddress.Parse("10.119.200.30"), 2735);
+            var tcpListener = new TcpListener(IPAddress.Parse("10.210.20.96"), 2735);
             new Thread(() =>
             {
                 tcpListener.Start();

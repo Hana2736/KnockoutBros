@@ -12,19 +12,20 @@ namespace Movement
         private bool groundedForJump = true;
         public uint playerId = 0;
 
-        private float inputX, inputZ;
+        public float inputX;
+        public float inputZ;
         private float jumpCooldown = 0.2f;
 
         public bool localPlayer;
         private Collider myCol;
-        private Rigidbody myRb;
+        public Rigidbody myRb;
         private SkipTickReason skipTick;
         private bool skipTickWaitingAlready;
 
 
         public void Start()
         {
-            localPlayer = true;
+            //localPlayer = true;
 
             skipTick = SkipTickReason.None;
             skipTickWaitingAlready = false;
@@ -54,8 +55,8 @@ namespace Movement
             groundedForJump = true;
             if (skipTick == SkipTickReason.Dive)
             {
-                myRb.linearVelocity *= 0.3f;
-                StartCoroutine(StopTickingForTime(3f));
+                myRb.linearVelocity *= 0.2f;
+                StartCoroutine(StopTickingForTime(2.5f));
                 StartCoroutine(GetBackUp());
             }
         }
@@ -107,18 +108,18 @@ namespace Movement
             if (jumpKey && jumpCooldown <= .01 && groundedForJump)
             {
                 //Debug.Log("try jump...");
-                myRb.AddForce(Vector3.up * 5, ForceMode.Impulse);
+                myRb.AddForce(Vector3.up * 6, ForceMode.Impulse);
                 jumpCooldown = 0.2f;
             }
 
             if (diveKey)
             {
-                myRb.AddForce(Vector3.up * 2.5f, ForceMode.Impulse);
+                myRb.AddForce(Vector3.up * 3f, ForceMode.Impulse);
                 //Vector3 forcePoint = myCol.bounds.center + new Vector3(0, myCol.bounds.extents.y/2, 0);
                 // myRb.AddForceAtPosition(Vector3.forward * 5, forcePoint);
                 myRb.constraints = RigidbodyConstraints.None;
-                myRb.AddForce(transform.forward * 4.5f, ForceMode.Impulse);
-                myRb.AddTorque(transform.right * 0.125f, ForceMode.Impulse);
+                myRb.AddForce(transform.forward * 3f, ForceMode.Impulse);
+                myRb.AddTorque(transform.right * 0.145f, ForceMode.Impulse);
                 skipTick = SkipTickReason.Dive;
                 groundedForJump = false;
             }
@@ -142,7 +143,7 @@ namespace Movement
             myRb.angularVelocity = Vector3.zero;
 
             var elapsedTime = 0f;
-            var recoveryDuration = 2f;
+            var recoveryDuration = 1.5f;
             var startRotation = transform.rotation;
 
             yield return new WaitForSeconds(1f);
