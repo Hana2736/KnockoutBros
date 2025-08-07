@@ -40,17 +40,22 @@ namespace Network
             //Debug.Log("time until next tick = "+timeUntilNextTick);
             if (timeUntilNextTick <= 0)
             {
-                if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client && NetClient.isReadyForTicking)
+                switch (NetServer.BuiltRunningMode)
                 {
-                    NetClient.SendMsg(CreatePlayerUpdateMessage(NetClient.clientId));
-                }
-                else
-                {
-                    foreach (var player in serverMsgHandler.gameManager.alivePlayerIds)
+                    case NetServer.RunningMode.Client when NetClient.isReadyForTicking:
+                        NetClient.SendMsg(CreatePlayerUpdateMessage(NetClient.clientId));
+                        break;
+                    case NetServer.RunningMode.Server:
                     {
-                        netServer.SendMessageToAllBut(player, CreatePlayerUpdateMessage(player));
+                        foreach (var player in serverMsgHandler.gameManager.alivePlayerIds)
+                        {
+                            netServer.SendMessageToAllBut(player, CreatePlayerUpdateMessage(player));
+                        }
+
+                        break;
                     }
                 }
+
                 timeUntilNextTick = 1f / tickRate;
             }
             if (NetServer.BuiltRunningMode == NetServer.RunningMode.Server)
@@ -112,6 +117,38 @@ namespace Network
                             msg);
                         break;
                     }
+                    case PacketTypes.PacketType.PlayerLoadedMessage:
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Server)
+                        {
+                            serverMsgHandler.HandlePlayerLoadedMsg();
+                        }
+                        break;
+                    }
+                    case PacketTypes.PacketType.ChangeGameScene:
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                        {
+                            clientMsgHandler.HandleLevelChangeMsg(msg);
+                        }
+                        break; 
+                    }
+                    case PacketTypes.PacketType.PlayerQualifiedMessage:
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                        {
+                            clientMsgHandler.HandleQualifiedPlayerMsg(msg);
+                        }
+                        break; 
+                    }
+                    case PacketTypes.PacketType.PlayerEliminatedMessage:
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                        {
+                            clientMsgHandler.HandleEliminatedPlayerMsg(msg);
+                        }
+                        break; 
+                    }
                     /* case PacketTypes.PacketType.SecretKeyMessage:
                     {
                         HandleSecretKeyMsg(msg);
@@ -138,7 +175,13 @@ namespace Network
         {
             var playerUpdData = MessagePacker.UnpackPlayerUpdateMsg(msg);
             if (clientId == 0)
+            {
                 clientId = playerUpdData.playerID;
+                //check if player is really alive
+                if(!idToPlayers[clientId].parentGameManager.alivePlayerIds.Contains(clientId))
+                    return;
+            }
+                
             try
             {
                 var playerHandler = idToPlayers[clientId];
@@ -159,18 +202,18 @@ namespace Network
                 playerHandler.inputX = playerUpdData.inputX;
                 playerHandler.inputZ = playerUpdData.inputZ;
                 
-                Debug.Log("Unpacked update: "+clientId+"\n"+newPos+"\n"+newRot.eulerAngles+"\n"+newVel);
+                //Debug.Log("Unpacked update: "+clientId+"\n"+newPos+"\n"+newRot.eulerAngles+"\n"+newVel);
             }
             catch (Exception e)
             {
                 //oh well, they sent us garbage
-                Debug.LogWarning("Failed to unpack player update: "+e.Message);
+                //Debug.LogWarning("Failed to unpack player update: "+e.Message);
             }
         }
 
         public byte[] CreatePlayerUpdateMessage(uint clientId)
         {
-            Debug.Log("Trying to send an update for "+clientId);
+            //Debug.Log("Trying to send an update for "+clientId);
             var playerCode = idToPlayers[clientId];
             if(!playerCode.readyForUpdates)
                 return new byte[]{(byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00};

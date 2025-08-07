@@ -42,6 +42,11 @@ namespace Network
         {
             netServer.SendMessage(clientId, msg);
         }
+
+        public void HandlePlayerLoadedMsg()
+        {
+            gameManager.HumanPlayerIsReady();
+        }
         
     }
 }

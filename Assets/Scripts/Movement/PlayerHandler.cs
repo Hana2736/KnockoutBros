@@ -44,7 +44,7 @@ namespace Movement
             myCol = GetComponent<Collider>();
             characterHeight = myCol.bounds.extents.y;
             readyForUpdates = true;
-            Debug.Log("Is bot player? "+isBotPlayer);
+            //Debug.Log("Is bot player? "+isBotPlayer);
             myBotController = GetComponent<BotController>();
             if (!isBotPlayer)
                 Destroy(myBotController);
@@ -86,13 +86,17 @@ namespace Movement
                 return;
             if (other.GetComponent<DeathZone>() is not null)
             {
+                Debug.Log("server-side player dead "+playerId);
                 parentGameManager.OnPlayerEliminated(playerId);
+                gameObject.SetActive(false);
                 return;
             }
 
             if (other.GetComponent<FinishZone>() is not null)
             {
+                Debug.Log("server-side player qualified "+playerId);
                 parentGameManager.OnPlayerQualify(playerId);
+                gameObject.SetActive(false);
                 return;
             }
 
@@ -100,7 +104,13 @@ namespace Movement
             if (pointZone is not null)
             {
                 parentGameManager.OnPlayerScore(pointZone.pointsWorth, playerId);
+                Destroy(pointZone.gameObject);
                 return;
+            }
+
+            if (other.GetComponent<ReadyToPlayZone>() is not null)
+            {
+                parentGameManager.readyPlayers.Add(playerId);
             }
         }
 
@@ -209,7 +219,10 @@ namespace Movement
         public enum SkipTickReason
         {
             None,
-            Dive
+            Dive,
+            Dead,
+            Stunned,
+            GameOver
         }
     }
 }

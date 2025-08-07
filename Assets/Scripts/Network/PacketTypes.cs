@@ -11,8 +11,10 @@ public class PacketTypes
         PlayerQualifiedMessage,
         PlayerEliminatedMessage,
         PlayerScoreUpdate,
+        ChangeGameScene,
+        PlayerLoadedMessage,
+        StartRound,
         
-
-        InvalidPacket = 0xFF
+        InvalidPacket
     }
 }

@@ -81,7 +81,7 @@ namespace Movement
             // Do not process new triggers if the bot is not ready or is in an uncontrollable state (e.g., after a dive).
             if (!botReady || myPlayer.skipTick != PlayerHandler.SkipTickReason.None)
             {
-                Debug.Log("skipping bot turn");
+                //Debug.Log("skipping bot turn");
                 return;
             }
 

@@ -1,6 +1,7 @@
 using System;
 using TMPro;
 using UnityEngine;
+using Util;
 
 namespace Network
 {
@@ -8,11 +9,13 @@ namespace Network
     {
         private PingSender pingSender;
         public GameMsgHandlerCommon msgHandlerCommon;
+        public LevelLoader LevelLoader;
 
         private void Start()
         {
             pingSender = GetComponent<PingSender>();
             msgHandlerCommon = GetComponent<GameMsgHandlerCommon>();
+            LevelLoader = GetComponent<LevelLoader>();
         }
 
 
@@ -63,6 +66,26 @@ namespace Network
         {
             var playerId = MessagePacker.UnpackAddPlayerMessage(msg);
             msgHandlerCommon.AddNewPlayer(playerId);
+        }
+
+        public void HandleQualifiedPlayerMsg(byte[] msg)
+        {
+            var playerId = MessagePacker.UnpackPlayerQualifiedMessage(msg);
+            Debug.Log("Qualified: "+playerId);
+        }
+        
+        public void HandleEliminatedPlayerMsg(byte[] msg)
+        {
+            var playerId = MessagePacker.UnpackPlayerEliminatedMessage(msg);
+            Debug.Log("Eliminated: "+playerId);
+        }
+
+        public void HandleLevelChangeMsg(byte[] msg)
+        {
+            var nextConfig = MessagePacker.UnpackChangeGameSceneMsg(msg);
+            LevelLoader.LoadLevel(nextConfig.GameLevel);
+            Debug.Log("Sending player loaded message-stage: game conf recieve");
+            NetClient.SendMsg(MessagePacker.PackPlayerLoadedMessage());
         }
     }
 }

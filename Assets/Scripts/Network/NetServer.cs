@@ -15,7 +15,7 @@ namespace Network
             Client
         }
 
-        public static readonly RunningMode BuiltRunningMode = RunningMode.Server;
+        public static readonly RunningMode BuiltRunningMode = RunningMode.Client;
 
         public uint nextClientID;
         public ConcurrentDictionary<TcpClient, uint> clientToID;
@@ -23,9 +23,9 @@ namespace Network
         public ConcurrentDictionary<uint, ConcurrentQueue<byte[]>> messageRecvQueue;
 
         public ConcurrentDictionary<uint, ConcurrentQueue<byte[]>> messageSendQueue;
-        public ConcurrentDictionary<uint, Guid> secretKeys;
 
         public ConcurrentQueue<uint> newClientsForGame;
+        public ConcurrentDictionary<uint, Guid> secretKeys;
 
 
         public void Start()
@@ -44,7 +44,7 @@ namespace Network
             idToClient = new ConcurrentDictionary<uint, TcpClient>();
             messageRecvQueue = new ConcurrentDictionary<uint, ConcurrentQueue<byte[]>>();
             messageSendQueue = new ConcurrentDictionary<uint, ConcurrentQueue<byte[]>>();
-            newClientsForGame = new();
+            newClientsForGame = new ConcurrentQueue<uint>();
 
             var tcpListener = new TcpListener(IPAddress.Parse("10.119.200.30"), 2735);
             new Thread(() =>
@@ -77,7 +77,6 @@ namespace Network
                 uint messageLengthReal = 0;
                 byte[] incomingMsgChunk = null;
                 uint readIndex = 0;
-
                 while (true)
                 {
                     var messageByte = cliStream.ReadByte();
@@ -98,8 +97,16 @@ namespace Network
                                 break;
                             case 4:
                                 messageLengthReal = BitConverter.ToUInt32(messageLengthBytes);
-                                Debug.Log("Got full header! Type=" + (PacketTypes.PacketType)headerType + ", size of " +
-                                          messageLengthReal + " bytes.");
+
+                                //Debug.Log("Got full header! Type=" + (PacketTypes.PacketType)headerType + ", size of " + messageLengthReal + " bytes.");
+                                if (messageLengthReal == 0)
+                                {
+                                    myQueue.Enqueue(new byte[]{headerType, 0x00, 0x00, 0x00, 0x00});
+                                    readingHeader = true;
+                                    headerLen = 0;
+                                    readIndex = 0;
+                                    continue;
+                                }
                                 incomingMsgChunk = new byte[messageLengthReal];
                                 readingHeader = false;
                                 readIndex = 0;
@@ -115,20 +122,22 @@ namespace Network
                         if (readIndex < incomingMsgChunk.Length)
                             continue;
                         var fullMessage = new byte[5 + incomingMsgChunk.Length];
+
                         readingHeader = true;
                         headerLen = 0;
                         fullMessage[0] = headerType;
                         for (var i = 0; i < messageLengthBytes.Length; i++) fullMessage[i + 1] = messageLengthBytes[i];
                         for (var i = 0; i < incomingMsgChunk.Length; i++) fullMessage[i + 5] = incomingMsgChunk[i];
                         myQueue.Enqueue(fullMessage);
-                        Debug.Log("Finished getting all bytes! queuing and resetting (total msg pak = " +
-                                  BitConverter.ToString(fullMessage) + " len = " + fullMessage.Length + ")");
+                        //Debug.Log("Finished getting all bytes! queuing and resetting (total msg pak = " +
+                        //        BitConverter.ToString(fullMessage) + " len = " + fullMessage.Length + ")");
                     }
                 }
             }
             catch (Exception error)
             {
-                Debug.LogWarning("Client had a recv error! id: " + clientId + "\n" + error.Message);
+                Debug.LogWarning("Client had a recv error! id: " + clientId + "\n" + error.Message + "\n" +
+                                 error.StackTrace);
             }
         }
 
@@ -151,7 +160,8 @@ namespace Network
             }
             catch (Exception error)
             {
-                Debug.LogWarning("Client had a send error! id: " + clientId + "\n" + error.Message);
+                Debug.LogWarning("Client had a send error! id: " + clientId + "\n" + error.Message + "\n" +
+                                 error.StackTrace);
             }
         }
 
@@ -181,7 +191,7 @@ namespace Network
 
         public void SendMessage(byte[] msgData)
         {
-            for (uint index = 2; index < nextClientID+1; index++)
+            for (uint index = 2; index < nextClientID + 1; index++)
             {
                 if (!messageSendQueue.ContainsKey(index))
                     continue;
@@ -191,7 +201,7 @@ namespace Network
 
         public void SendMessageToAllBut(uint clientId, byte[] msgData)
         {
-            for (uint index = 2; index < nextClientID+1; index++)
+            for (uint index = 2; index < nextClientID + 1; index++)
             {
                 if (clientId == index || !messageSendQueue.ContainsKey(index))
                     continue;

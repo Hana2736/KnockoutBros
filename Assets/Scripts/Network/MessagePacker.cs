@@ -1,10 +1,12 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using UnityEngine;
+using Util;
 
 namespace Network
 {
-    public class MessagePacker
+    public class MessagePacker : MonoBehaviour
     {
         private static readonly int headerLen = 0x1 + sizeof(uint);
 
@@ -97,6 +99,22 @@ namespace Network
             return retBlock;
         }
         
+
+        public static byte[] PackPlayerLoadedMessage()
+        {
+            Debug.Log("Sending player loaded message-stage: packmsg called");
+            var messageID = PacketTypes.PacketType.PlayerLoadedMessage;
+            var retBlock = WriteHeader(messageID, 0);
+            Debug.Log("Sending player loaded message-stage: retblock created");
+            return retBlock;
+        }
+        
+        public static byte[] PackStartRoundMessage()
+        {
+            var messageID = PacketTypes.PacketType.StartRound;
+            var retBlock = WriteHeader(messageID, 0);
+            return retBlock;
+        }
         
         public static uint UnpackSendClientIDMessage(byte[] msg)
         {
@@ -159,6 +177,32 @@ namespace Network
             return retBlock;
         }
         
+        public static byte[] PackChangeGameSceneMsg(NewGameLevelMessage message)
+        {
+            var messageID = PacketTypes.PacketType.ChangeGameScene;
+            
+            var messageSize = 2;
+            var retBlock = WriteHeader(messageID, (uint)messageSize);
+
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.StructureToPtr(message, structPointer, true);
+            Marshal.Copy(structPointer, retBlock, headerLen, messageSize);
+            Marshal.FreeHGlobal(structPointer);
+
+            return retBlock;
+        }
+
+        public static NewGameLevelMessage UnpackChangeGameSceneMsg(byte[] msg)
+        {
+            var messageSize = 2;
+            NewGameLevelMessage returned;
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.Copy(msg, headerLen, structPointer, messageSize);
+            returned = Marshal.PtrToStructure<NewGameLevelMessage>(structPointer);
+            Marshal.FreeHGlobal(structPointer);
+            return returned;
+        }
+        
         
         
         
@@ -191,6 +235,13 @@ namespace Network
                 angVelZ;
 
             public float inputX, inputZ;
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct NewGameLevelMessage
+        {
+            public GameManager.RoundType RoundType;
+            public GameManager.GameLevel GameLevel;
         }
     }
 }
