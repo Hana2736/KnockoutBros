@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Movement;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Network
@@ -18,7 +19,7 @@ namespace Network
         public GameObject playerPrefab;
         public Dictionary<uint, PlayerHandler> idToPlayers;
 
-        private readonly float tickRate = 10f;
+        private readonly float tickRate = 15f;
         private float timeUntilNextTick = 1f;
         private void Start()
         {
@@ -45,7 +46,7 @@ namespace Network
                 }
                 else
                 {
-                    foreach (var player in serverMsgHandler.syncedPlayerIds)
+                    foreach (var player in serverMsgHandler.gameManager.alivePlayerIds)
                     {
                         netServer.SendMessageToAllBut(player, CreatePlayerUpdateMessage(player));
                     }
@@ -75,7 +76,7 @@ namespace Network
                 {
                     // burn the cpu here
                 }
-                Debug.Log("handling new message from remote...");
+                //Debug.Log("handling new message from remote...");
                 switch ((PacketTypes.PacketType)msg[0])
                 {
                     case PacketTypes.PacketType.SendClientIDMessage:
@@ -120,7 +121,7 @@ namespace Network
             }
         }
 
-        public void AddNewPlayer(uint clientId)
+        public PlayerHandler AddNewPlayer(uint clientId)
         {
             var newPlayerObj = Instantiate(playerPrefab, new Vector3(0f, 3f, 0f), Quaternion.identity);
             var newPlayerCode = newPlayerObj.GetComponent<PlayerHandler>();
@@ -130,6 +131,7 @@ namespace Network
 
             if (newPlayerCode.localPlayer)
                 NetClient.isReadyForTicking = true;
+            return newPlayerCode;
         }
 
         public void HandlePlayerUpdateMessage(uint clientId, byte[] msg)
@@ -145,19 +147,24 @@ namespace Network
                 Vector3 newPos = new Vector3(playerUpdData.positionX, playerUpdData.positionY, playerUpdData.positionZ);
                 Quaternion newRot = Quaternion.Euler(playerUpdData.rotationX, playerUpdData.rotationY, playerUpdData.rotationZ);
                 Vector3 newVel = new Vector3(playerUpdData.velocityX, playerUpdData.velocityY, playerUpdData.velocityZ);
+                Vector3 newAngVel = new Vector3(playerUpdData.angVelX, playerUpdData.angVelY, playerUpdData.angVelZ);
 
                 // apply it to the player TODO lerp
                 playerHandler.transform.position = newPos;
                 playerHandler.transform.rotation = newRot;
                 playerHandler.myRb.linearVelocity = newVel;
+                playerHandler.myRb.angularVelocity = newAngVel;
                 
                 // apply input so they will move accurately
                 playerHandler.inputX = playerUpdData.inputX;
                 playerHandler.inputZ = playerUpdData.inputZ;
+                
+                Debug.Log("Unpacked update: "+clientId+"\n"+newPos+"\n"+newRot.eulerAngles+"\n"+newVel);
             }
             catch (Exception e)
             {
                 //oh well, they sent us garbage
+                Debug.LogWarning("Failed to unpack player update: "+e.Message);
             }
         }
 
@@ -165,9 +172,12 @@ namespace Network
         {
             Debug.Log("Trying to send an update for "+clientId);
             var playerCode = idToPlayers[clientId];
+            if(!playerCode.readyForUpdates)
+                return new byte[]{(byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00};
             Vector3 position = playerCode.transform.position;
             Vector3 rotation = playerCode.transform.eulerAngles;
             Vector3 velocity = playerCode.myRb.linearVelocity;
+            Vector3 angVel = playerCode.myRb.angularVelocity;
             var updTemplate = new MessagePacker.PlayerUpdateMessage
             {
                 playerID = clientId,
@@ -180,6 +190,9 @@ namespace Network
                 velocityX = velocity.x,
                 velocityY = velocity.y,
                 velocityZ = velocity.z,
+                angVelX = angVel.x,
+                angVelY = angVel.y,
+                angVelZ = angVel.z,
                 inputX = playerCode.inputX,
                 inputZ = playerCode.inputZ
             };

@@ -46,7 +46,7 @@ namespace Network
             messageSendQueue = new ConcurrentDictionary<uint, ConcurrentQueue<byte[]>>();
             newClientsForGame = new();
 
-            var tcpListener = new TcpListener(IPAddress.Parse("10.210.20.96"), 2735);
+            var tcpListener = new TcpListener(IPAddress.Parse("10.119.200.30"), 2735);
             new Thread(() =>
             {
                 tcpListener.Start();

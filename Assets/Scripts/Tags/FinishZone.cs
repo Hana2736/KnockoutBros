@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Tags
 {
-    public class Jumpable : MonoBehaviour
+    public class FinishZone : MonoBehaviour
     {
     }
 }

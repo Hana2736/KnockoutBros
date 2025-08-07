@@ -1,27 +1,38 @@
+using System;
 using System.Collections;
+using Network;
+using Tags;
 using UnityEngine;
+using Util;
 
 namespace Movement
 {
     public class PlayerHandler : MonoBehaviour
     {
+        public uint playerId;
+
+        public float inputX;
+        public float inputZ;
+        public bool jumpKey;
+        public bool diveKey;
+
+        public bool localPlayer;
+        public Rigidbody myRb;
+        public bool readyForUpdates;
+
+        public bool isBotPlayer;
+        public BotController myBotController;
         private readonly float acceleration = 10f;
         private readonly float walkSpeed = 1.2f;
         private float armsSpeed = .7f;
         private float characterHeight;
         private bool groundedForJump = true;
-        public uint playerId = 0;
-
-        public float inputX;
-        public float inputZ;
         private float jumpCooldown = 0.2f;
-
-        public bool localPlayer;
         private Collider myCol;
-        public Rigidbody myRb;
-        private SkipTickReason skipTick;
+        public SkipTickReason skipTick;
         private bool skipTickWaitingAlready;
 
+        public GameManager parentGameManager;
 
         public void Start()
         {
@@ -32,6 +43,13 @@ namespace Movement
             myRb = GetComponent<Rigidbody>();
             myCol = GetComponent<Collider>();
             characterHeight = myCol.bounds.extents.y;
+            readyForUpdates = true;
+            Debug.Log("Is bot player? "+isBotPlayer);
+            myBotController = GetComponent<BotController>();
+            if (!isBotPlayer)
+                Destroy(myBotController);
+            else
+                myBotController.Setup();
         }
 
         public void Update()
@@ -62,6 +80,31 @@ namespace Movement
         }
 
 
+        public void OnTriggerEnter(Collider other)
+        {
+            if(NetServer.BuiltRunningMode != NetServer.RunningMode.Server)
+                return;
+            if (other.GetComponent<DeathZone>() is not null)
+            {
+                parentGameManager.OnPlayerEliminated(playerId);
+                return;
+            }
+
+            if (other.GetComponent<FinishZone>() is not null)
+            {
+                parentGameManager.OnPlayerQualify(playerId);
+                return;
+            }
+
+            var pointZone = other.GetComponent<PointsZone>();
+            if (pointZone is not null)
+            {
+                parentGameManager.OnPlayerScore(pointZone.pointsWorth, playerId);
+                return;
+            }
+        }
+
+
         private void PlayerMovement()
         {
             jumpCooldown -= Time.deltaTime;
@@ -69,8 +112,7 @@ namespace Movement
                 jumpCooldown = 0;
             var maxSpeed = walkSpeed;
 
-            var jumpKey = false;
-            var diveKey = false;
+
             if (localPlayer)
             {
                 inputX = Input.GetAxisRaw("Horizontal");
@@ -164,7 +206,7 @@ namespace Movement
             }
         }
 
-        private enum SkipTickReason
+        public enum SkipTickReason
         {
             None,
             Dive

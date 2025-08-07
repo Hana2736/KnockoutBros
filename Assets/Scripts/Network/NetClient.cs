@@ -57,7 +57,7 @@ namespace Network
             resetting = true;
             readBuf = new byte[32768];
             readBufPos = 0;
-            sock = new WebSocket("ws://10.210.20.96:2736");
+            sock = new WebSocket("ws://10.119.200.30:2736");
             sock.OnOpen += () => { Debug.Log("Net Connected"); };
             sock.OnClose += code =>
             {

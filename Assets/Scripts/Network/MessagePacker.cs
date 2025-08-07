@@ -62,7 +62,7 @@ namespace Network
             var messageID = PacketTypes.PacketType.PlayerUpdateMessage;
 
 
-            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 2));
+            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 3 + 2));
             var retBlock = WriteHeader(messageID, (uint)messageSize);
 
             var structPointer = Marshal.AllocHGlobal(messageSize);
@@ -75,10 +75,10 @@ namespace Network
 
         public static PlayerUpdateMessage UnpackPlayerUpdateMsg(byte[] msg)
         {
-            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 2));
+            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 3 + 2));
             PlayerUpdateMessage returned;
             var structPointer = Marshal.AllocHGlobal(messageSize);
-            Marshal.Copy(structPointer, msg, headerLen, messageSize);
+            Marshal.Copy(msg, headerLen, structPointer, messageSize);
             returned = Marshal.PtrToStructure<PlayerUpdateMessage>(structPointer);
             Marshal.FreeHGlobal(structPointer);
             return returned;
@@ -119,9 +119,61 @@ namespace Network
             BitConverter.TryWriteBytes(retBlock.AsSpan(1, sizeof(uint)), dataLen);
             return retBlock;
         }
+        
+        public static uint UnpackPlayerEliminatedMessage(byte[] msg)
+        {
+            return BitConverter.ToUInt32(msg, headerLen);
+        }
 
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public class PlayerUpdateMessage
+        public static byte[] PackPlayerEliminatedMessage(uint playerId)
+        {
+            var messageID = PacketTypes.PacketType.PlayerEliminatedMessage;
+            var retBlock = WriteHeader(messageID, sizeof(uint));
+            BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), playerId);
+            return retBlock;
+        }
+        
+        public static uint UnpackPlayerQualifiedMessage(byte[] msg)
+        {
+            return BitConverter.ToUInt32(msg, headerLen);
+        }
+
+        public static byte[] PackPlayerQualifiedMessage(uint playerId)
+        {
+            var messageID = PacketTypes.PacketType.PlayerQualifiedMessage;
+            var retBlock = WriteHeader(messageID, sizeof(uint));
+            BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), playerId);
+            return retBlock;
+        }
+        
+        public static uint UnpackPlayerScoreUpdateMessage(byte[] msg)
+        {
+            return BitConverter.ToUInt32(msg, headerLen);
+        }
+
+        public static byte[] PackPlayerScoreUpdateMessage(uint newScore)
+        {
+            var messageID = PacketTypes.PacketType.PlayerScoreUpdate;
+            var retBlock = WriteHeader(messageID, sizeof(uint));
+            BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), newScore);
+            return retBlock;
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PlayerUpdateMessage
         {
             public uint playerID;
 
@@ -133,7 +185,10 @@ namespace Network
                 rotationZ,
                 velocityX,
                 velocityY,
-                velocityZ;
+                velocityZ,
+                angVelX,
+                angVelY,
+                angVelZ;
 
             public float inputX, inputZ;
         }
