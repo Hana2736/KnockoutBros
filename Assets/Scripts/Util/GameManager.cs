@@ -30,7 +30,7 @@ namespace Util
 
         public static uint targetPlayerCount = 30;
 
-        public static float playersQualifyPerRoundPercent = 0.66f;
+        public static float playersQualifyPerRoundPercent = 0.30f;
 
         public GameLevel currentLevel;
         public RoundType currentRoundType;
@@ -311,8 +311,10 @@ namespace Util
                 var playerId = alivePlayerIds.ToList()[index];
                 var thisPlayer = serverHandler.msgHandlerCommon.idToPlayers[playerId];
                 thisPlayer.transform.position = spawner.position;
-                serverHandler.netServer.SendMessage(serverHandler.msgHandlerCommon.CreatePlayerUpdateMessage(playerId));
+                thisPlayer.transform.rotation = spawner.rotation;
 
+                serverHandler.netServer.SendMessage(serverHandler.msgHandlerCommon.CreatePlayerUpdateMessage(playerId));
+                thisPlayer.haveWeStartedYet = true;
             }
         }
 
@@ -323,8 +325,12 @@ namespace Util
                 return;
             playersLoaded++;
             if (playersLoaded < playersLoadedTarget) return;
-            Debug.Log("Humans are ready, starting");
+            
+            Debug.Log("All players have loaded. Spreading them to spawners and starting final countdown.");
             waitingForLoadedPlayers = false;
+
+            SpreadPlayers();
+            
             ready = true;
 
             switch (currentLevel)
@@ -355,8 +361,7 @@ namespace Util
                         break;
                     }
             }
-
-            SpreadPlayers();
+            
             StartCoroutine(UnlockPlayersIn5());
         }
 
@@ -364,6 +369,7 @@ namespace Util
         public IEnumerator UnlockPlayersIn5()
         {
             yield return new WaitForSeconds(5f);
+            Debug.Log("Unlocking all players now.");
             for (var index = 0; index < alivePlayerIds.Count; index++)
             {
                 var playerId = alivePlayerIds.ToList()[index];
@@ -378,117 +384,103 @@ namespace Util
         {
             while (!serverHandler.netServer.newClientsForGame.IsEmpty)
             {
-                // get each new player ID
                 uint nextClient = 0;
                 while (!serverHandler.netServer.newClientsForGame.TryDequeue(out nextClient))
                 {
                     // burn the cpu here
                 }
-
-                // keep them tracked so we can handle their game state
+                
                 alivePlayerIds.Add(nextClient);
-
-
-                // tell the game world to add the player
+                
                 var newPlayer = serverHandler.msgHandlerCommon.AddNewPlayer(nextClient);
                 newPlayer.parentGameManager = this;
-
-                //check if this is a bot ID
+                
                 if (nextClient > uint.MaxValue / 2) newPlayer.isBotPlayer = true;
-
-                // tell everybody about the new player
+                
                 serverHandler.netServer.SendMessage(MessagePacker.PackAddPlayerMessage(nextClient));
-
-                // we need to tell our new client about existing players  
+                
                 foreach (var playerId in alivePlayerIds)
                 {
-                    // we already told them about themself so skip that
                     if (playerId == nextClient)
                         continue;
-
-                    // tell just the new clients about every other player
+                    
                     serverHandler.netServer.SendMessage(nextClient, MessagePacker.PackAddPlayerMessage(playerId));
                 }
             }
         }
         private void ChangeGameType(RoundType newType, GameLevel newLevel)
         {
-
-            // 1. Tell all clients to start loading the new scene.
             serverHandler.netServer.SendMessage(MessagePacker.PackChangeGameSceneMsg(
                 new MessagePacker.NewGameLevelMessage
                 {
                     RoundType = newType,
                     GameLevel = newLevel
                 }));
-
-            // 2. Determine the list of players advancing to the next round.
+            
             List<uint> playerIdsForNextRound;
-
-            // If we are transitioning from the lobby, all 'alive' players should move to the next round.
+            
             if (currentRoundType == RoundType.Free)
             {
                 playerIdsForNextRound = alivePlayerIds.ToList();
             }
-            else // For all other rounds, only players who have explicitly qualified will advance.
+            else
             {
                 playerIdsForNextRound = qualifiedPlayerIds.ToList();
             }
-
-            // Clear the old lists to prepare for the new round.
+            
             qualifiedPlayerIds.Clear();
             alivePlayerIds.Clear();
-
-            // 3. Destroy all old player GameObjects on the server to ensure a clean slate.
+            
             foreach (var existingPlayer in serverHandler.msgHandlerCommon.idToPlayers.Values)
             {
                 if (existingPlayer != null) Destroy(existingPlayer.gameObject);
             }
             serverHandler.msgHandlerCommon.idToPlayers.Clear();
-
-            // 4. Update the server's game state and load the level scenery.
+            
             levelTimeRemaining = timeLimitsPerRound[newType];
             currentRoundType = newType;
             currentLevel = newLevel;
             levelLoader.LoadLevel(newLevel);
-
-            // 5. Re-create fresh player instances for the new round.
+            
             foreach (var playerId in playerIdsForNextRound)
             {
-                // AddNewPlayer instantiates the prefab.
                 var newPlayer = serverHandler.msgHandlerCommon.AddNewPlayer(playerId);
                 newPlayer.parentGameManager = this;
                 if (playerId > uint.MaxValue / 2) newPlayer.isBotPlayer = true;
 
                 alivePlayerIds.Add(playerId);
-
-                // Tell all clients to create this new player in their world.
+                
                 serverHandler.netServer.SendMessage(MessagePacker.PackAddPlayerMessage(playerId));
             }
-
-            // 6. Reset the server's state machine to wait for players to finish loading.
-            ready = false;
-            waitingForLoadedPlayers = true;
-            playersLoaded = 0;
-            playersLoadedTarget = 0;
-
-            // 7. Initialize the state of the newly created players for the "loading" phase.
-            foreach (var playerId in alivePlayerIds)
+            
+            // Only freeze players if the next level is NOT the menu/lobby.
+            if (newLevel != GameLevel.MenuLevel)
             {
-                var thisPlayer = serverHandler.msgHandlerCommon.idToPlayers[playerId];
-
-                // Safely get the Rigidbody component to avoid null reference errors.
-                Rigidbody playerRb = thisPlayer.GetComponent<Rigidbody>();
-
-                // Set the player to a "frozen" state until the round officially starts.
-                thisPlayer.skipTick = PlayerHandler.SkipTickReason.Loading;
-                if (playerRb != null) playerRb.isKinematic = true;
-
-                // Count how many human players we need to wait for.
-                if (playerId < uint.MaxValue / 2)
+                ready = false;
+                waitingForLoadedPlayers = true;
+                playersLoaded = 0;
+                playersLoadedTarget = 0;
+                
+                foreach (var playerId in alivePlayerIds)
                 {
-                    playersLoadedTarget++;
+                    var thisPlayer = serverHandler.msgHandlerCommon.idToPlayers[playerId];
+                    Rigidbody playerRb = thisPlayer.GetComponent<Rigidbody>();
+                    
+                    thisPlayer.skipTick = PlayerHandler.SkipTickReason.Loading;
+                    if (playerRb != null) playerRb.isKinematic = true;
+                    
+                    if (playerId < uint.MaxValue / 2)
+                    {
+                        playersLoadedTarget++;
+                    }
                 }
+            }
+            else
+            {
+                // If we are loading the menu, players are free to move immediately.
+                // Reset relevant state machines.
+                ready = true;
+                waitingForLoadedPlayers = false;
             }
         }
     }

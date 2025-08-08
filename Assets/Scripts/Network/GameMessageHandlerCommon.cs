@@ -149,6 +149,12 @@ namespace Network
 
                             break;
                         }
+                        case PacketTypes.PacketType.SpawnWaterWave:
+                        {
+                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                                clientMsgHandler.HandleSpawnWaveMsg(msg);
+                                break;
+                        }
 
                         /* case PacketTypes.PacketType.SecretKeyMessage:
                         {
@@ -161,7 +167,7 @@ namespace Network
 
         public PlayerHandler AddNewPlayer(uint clientId)
         {
-            var newPlayerObj = Instantiate(playerPrefab, new Vector3(0f, 3f, 0f), Quaternion.identity);
+            var newPlayerObj = Instantiate(playerPrefab, new Vector3(0f, 999999f, 0f), Quaternion.identity);
             var newPlayerCode = newPlayerObj.GetComponent<PlayerHandler>();
             newPlayerCode.skipTick = PlayerHandler.SkipTickReason.Loading;
             newPlayerCode.localPlayer = NetClient.clientId == clientId;
@@ -172,6 +178,9 @@ namespace Network
                 NetClient.isReadyForTicking = true;
             return newPlayerCode;
         }
+
+
+    
 
         public void HandlePlayerUpdateMessage(uint clientId, byte[] msg)
         {

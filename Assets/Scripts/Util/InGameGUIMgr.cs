@@ -24,4 +24,8 @@ public class InGameGUIMgr : MonoBehaviour
         bannerText.text = "Eliminated!";
     }
     
+    public void HideBanner()
+    {
+        bannerText.gameObject.SetActive(false);
+    }
 }

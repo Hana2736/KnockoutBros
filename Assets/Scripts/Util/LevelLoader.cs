@@ -5,6 +5,7 @@ namespace Util
     public class LevelLoader : MonoBehaviour
     {
         public static GameObject parentForItems;
+        public static GameManager.GameLevel currLevel;
         public GameObject MenuLevelWorldPrefab,
             RaceLevelWorldPrefab,
             SurvivalLevelWorldPrefab,
@@ -39,6 +40,8 @@ namespace Util
                     newLevelToBuildPrefab = FinalLevelWorldPrefab;
                     break;
             }
+
+            currLevel = newLevel;
             
             
             AudioClip clipToPlay = null;

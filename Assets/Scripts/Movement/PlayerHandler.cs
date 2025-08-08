@@ -1,6 +1,7 @@
 using System.Collections;
 using Network;
 using Tags;
+using Unity.VisualScripting;
 using UnityEngine;
 using Util;
 
@@ -64,30 +65,23 @@ namespace Movement
         private Collider myCol;
         private bool skipTickWaitingAlready;
 
+        public bool haveWeStartedYet;
+
         public void Start()
         {
-            //localPlayer = true;
-
+            // A player should be able to move by default. The GameManager will freeze them if needed.
             skipTick = SkipTickReason.None;
             skipTickWaitingAlready = false;
             myRb = GetComponent<Rigidbody>();
             myCol = GetComponent<Collider>();
             characterHeight = myCol.bounds.extents.y;
             readyForUpdates = true;
-            //Debug.Log("Is bot player? "+isBotPlayer);
             myBotController = GetComponent<BotController>();
             myAnim = GetComponent<Animator>();
             if (!isBotPlayer)
                 Destroy(myBotController);
             else
                 myBotController.Setup();
-
-            // REMOVE THE OLD CAMERA ASSIGNMENT BLOCK
-            // if (localPlayer && cameraTransform is null)
-            // {
-            //     cameraTransform = Camera.main.transform;
-            //     Camera.main.gameObject.GetComponent<CameraController>().target = transform;
-            // }
 
             if (NetServer.BuiltRunningMode == NetServer.RunningMode.Server)
             {
@@ -105,15 +99,12 @@ namespace Movement
 
         public void ReceiveNetworkUpdate(Vector3 position, Quaternion rotation)
         {
-            // Calculate the time since the last packet to use as our interpolation duration
             timeBetweenPackets = Time.time - lastPakUpdate;
             lastPakUpdate = Time.time;
-
-            // Set the start of our lerp to the player's current position and rotation
+            
             oldPos = transform.position;
             oldAngles = transform.eulerAngles;
-
-            // Set the target position and rotation from the network packet
+            
             networkPositionTarget = position;
             networkRotationTarget = rotation;
         }
@@ -123,17 +114,20 @@ namespace Movement
 
         public void Update()
         {
-            // For the human-controlled local player, we need to make sure we have a camera reference.
-            // By putting this in Update, we continuously try to find the camera until it's available.
+
+            if (LevelLoader.currLevel == GameManager.GameLevel.MenuLevel)
+            {
+                if (isBotPlayer)
+                    Destroy(this.gameObject);
+                if (transform.position.y > 100 && localPlayer)
+                    transform.position = new Vector3(0, 2, 0);
+            }
             if (localPlayer && !isBotPlayer && cameraTransform == null)
             {
                 var mainCamera = Camera.main;
                 if (mainCamera != null)
                 {
-                    // Camera found! Assign its transform.
                     cameraTransform = mainCamera.transform;
-
-                    // Now, find the CameraController script on the camera and set this player as its target.
                     var camController = mainCamera.GetComponent<CameraController>();
                     if (camController != null)
                     {
@@ -142,31 +136,23 @@ namespace Movement
                 }
                 else
                 {
-                    // If we still can't find the camera, it's not ready yet. 
-                    // We'll skip the rest of this Update frame to prevent the error.
                     return;
                 }
             }
 
-
             if (globalSkipCalc)
             {
-                // --- Interpolation for remote players ---
                 float timeSinceLastPacket = Time.time - lastPakUpdate;
-                // Use the calculated time between packets for the interpolation period.
-                // If timeBetweenPackets is 0 (e.g., on the first packet), we snap to the target.
                 float t = (timeBetweenPackets > 0) ? Mathf.Clamp01(timeSinceLastPacket / timeBetweenPackets) : 1f;
 
                 transform.position = Vector3.Lerp(oldPos, networkPositionTarget, t);
                 transform.rotation = Quaternion.Slerp(Quaternion.Euler(oldAngles), networkRotationTarget, t);
-                // --- End of interpolation ---
 
                 SetAnimState(currentAnim);
-                // For remote players, we are done after interpolating.
                 return;
             }
-
-            if (SkipTickReason.Loading == skipTick)
+            
+            if (skipTick == SkipTickReason.Loading)
             {
                 SetAnimState(idle);
                 myRb.isKinematic = true;
@@ -176,13 +162,15 @@ namespace Movement
             }
             else
             {
-                myRb.isKinematic = false;
+                if (myRb.isKinematic)
+                {
+                    myRb.isKinematic = false;
+                }
             }
 
 
             SetAnimState(idle);
-            // Add the check for isKinematic to this line
-            if (skipTick == SkipTickReason.None && !myRb.isKinematic)
+            if (skipTick == SkipTickReason.None)
                 PlayerMovement();
             var animSet = false;
 
@@ -245,7 +233,7 @@ namespace Movement
         {
             if (NetServer.BuiltRunningMode != NetServer.RunningMode.Server || skipTick == SkipTickReason.Loading)
                 return;
-            if (other.GetComponent<DeathZone>() is not null)
+            if (other.GetComponent<DeathZone>() is not null && haveWeStartedYet)
             {
                 Debug.Log("server-side player dead " + playerId);
                 parentGameManager.OnPlayerEliminated(playerId);
@@ -253,7 +241,7 @@ namespace Movement
                 return;
             }
 
-            if (other.GetComponent<FinishZone>() is not null)
+            if (other.GetComponent<FinishZone>() is not null && haveWeStartedYet)
             {
                 Debug.Log("server-side player qualified " + playerId);
                 parentGameManager.OnPlayerQualify(playerId);
@@ -262,7 +250,7 @@ namespace Movement
             }
 
             var pointZone = other.GetComponent<PointsZone>();
-            if (pointZone is not null)
+            if (pointZone is not null && haveWeStartedYet)
             {
                 parentGameManager.OnPlayerScore(pointZone.pointsWorth, playerId);
                 Destroy(pointZone.gameObject);
@@ -310,41 +298,32 @@ namespace Movement
                 camRight.y = 0;
                 camForward.Normalize();
                 camRight.Normalize();
-
-                // We replace the original use of transform.forward/right with our new camera-relative directions.
+                
                 moveDirection = camForward * inputZ + camRight * inputX;
-
-                // Rotate the player model to smoothly face the direction of movement.
+                
                 if (moveDirection.magnitude > 0.1f)
                 {
                     var targetRotation = Quaternion.LookRotation(moveDirection.normalized);
                     myRb.MoveRotation(Quaternion.Slerp(transform.rotation, targetRotation,
                         rotationSpeed * Time.deltaTime));
                 }
-                // --- END OF MODIFICATIONS ---
             }
-
-
-            // Your original velocity logic now works with the new camera-relative moveDirection.
+            
             if (moveDirection.magnitude > 0)
             {
                 var velocity = myRb.linearVelocity;
-                moveDirection.Normalize(); // Prevents diagonal movement from being faster
+                moveDirection.Normalize(); 
                 var targetVelocity = Vector3.zero;
                 targetVelocity.x += moveDirection.x * maxSpeed;
                 targetVelocity.z += moveDirection.z * maxSpeed;
-
-                // Calculate the velocity change needed this frame
+                
                 var velocityChange = targetVelocity - new Vector3(velocity.x, 0, velocity.z);
-
-                // Apply acceleration, clamping the *change* in velocity
+                
                 velocityChange = Vector3.ClampMagnitude(velocityChange, acceleration * Time.deltaTime);
-
-                // Add the change to the current velocity
+                
                 velocity.x += velocityChange.x;
                 velocity.z += velocityChange.z;
-
-                // *Only Clamp with Input*
+                
                 velocity.x = Mathf.Clamp(velocity.x, -maxSpeed, maxSpeed);
                 velocity.z = Mathf.Clamp(velocity.z, -maxSpeed, maxSpeed);
                 myRb.linearVelocity = velocity;
@@ -352,7 +331,6 @@ namespace Movement
 
             if (jumpKey && jumpCooldown <= .01 && groundedForJump)
             {
-                //Debug.Log("try jump...");
                 myRb.AddForce(Vector3.up * 4, ForceMode.Impulse);
                 jumpCooldown = 0.2f;
                 groundedForJump = false;
@@ -362,8 +340,6 @@ namespace Movement
             {
                 myRb.linearVelocity = Vector3.zero;
                 myRb.AddForce(Vector3.up * 1.5f, ForceMode.Impulse);
-                //Vector3 forcePoint = myCol.bounds.center + new Vector3(0, myCol.bounds.extents.y/2, 0);
-                // myRb.AddForceAtPosition(Vector3.forward * 5, forcePoint);
                 myRb.constraints = RigidbodyConstraints.None;
                 myRb.AddForce(transform.forward * 3f, ForceMode.Impulse);
                 myRb.AddTorque(transform.right * 0.145f, ForceMode.Impulse);
@@ -395,19 +371,14 @@ namespace Movement
             var startEuler = startRotation.eulerAngles;
 
             yield return new WaitForSeconds(1f);
-
-            // Loop until the recovery duration is met
+            
             while (elapsedTime < recoveryDuration)
             {
-                // Calculate the interpolation factor (0 to 1)
                 var t = elapsedTime / recoveryDuration;
-                // Smoothly interpolate between the start and target rotations
                 transform.rotation = Quaternion.Slerp(startRotation, Quaternion.Euler(0, startEuler.y, 0), t);
-
-                // Increment elapsed time by the time since the last frame
+                
                 elapsedTime += Time.deltaTime;
-
-                // Yield control back to Unity for the next frame
+                
                 yield return null;
             }
 

@@ -15,7 +15,7 @@ namespace Network
         public LevelLoader LevelLoader;
         public InGameGUIMgr guiMgr;
         public GameObject CeilingSpikePrefab;
-        public List<uint> qualledPeople;
+    
         public RawImage loadingScreen;
         public Texture2D raceLoad, surviveLoad, ptsLoad, finalLoad, titleLoad;
         private PingSender pingSender;
@@ -25,7 +25,7 @@ namespace Network
         private List<Vector3[]> wavePaths;
         private void Start()
         {
-            qualledPeople = new List<uint>();
+        
             pingSender = GetComponent<PingSender>();
             msgHandlerCommon = GetComponent<GameMsgHandlerCommon>();
             LevelLoader = GetComponent<LevelLoader>();
@@ -62,7 +62,7 @@ namespace Network
 
             GameObject waveInstance = Instantiate(wavePrefab, selectedPath[0], waveRotation, new InstantiateParameters()
             {
-                parent = LevelLoader.parentForItems.transform,
+                parent = Util.LevelLoader.parentForItems.transform,
                 worldSpace = true
             });
 
@@ -128,7 +128,6 @@ namespace Network
             var playerId = MessagePacker.UnpackPlayerQualifiedMessage(msg);
             var playerCode = msgHandlerCommon.idToPlayers[playerId];
             if (playerId == NetClient.clientId) guiMgr.UpdateGuiWeQualified();
-            qualledPeople.Add(playerId);
             StartCoroutine(PlayOutQualAnim(playerCode));
             Debug.Log("Qualified: " + playerId);
         }
@@ -175,7 +174,7 @@ namespace Network
                 Quaternion.identity,
                 new InstantiateParameters
                 {
-                    parent = LevelLoader.parentForItems.transform,
+                    parent = Util.LevelLoader.parentForItems.transform,
                     worldSpace = true
                 });
         }
@@ -198,6 +197,8 @@ namespace Network
         private IEnumerator DoSceneChangeWork(byte[] msg)
         {
             var nextConfig = MessagePacker.UnpackChangeGameSceneMsg(msg);
+            
+            // 1. Set the correct loading screen texture and show it.
             switch (nextConfig.GameLevel)
             {
                 case GameManager.GameLevel.RaceLevel:
@@ -216,10 +217,10 @@ namespace Network
                     loadingScreen.texture = titleLoad;
                     break;
             }
-
             loadingScreen.enabled = true;
+            if (guiMgr != null) guiMgr.HideBanner();
 
-            // Destroy all player objects and clear local lists to prevent ghosts
+            // 2. Eradicate all existing player objects on the client.
             foreach (var player in msgHandlerCommon.idToPlayers.Values)
             {
                 if (player != null)
@@ -228,50 +229,23 @@ namespace Network
                 }
             }
             msgHandlerCommon.idToPlayers.Clear();
-            qualledPeople.Clear();
 
-            PlayerHandler newPlayer = null;
-            while (newPlayer is null)
-            {
-                try
-                {
-                    newPlayer = msgHandlerCommon.idToPlayers[NetClient.clientId];
-                }
-                catch (Exception e)
-                {
-                }
-                yield return null;
-            }
-            newPlayer.skipTick = PlayerHandler.SkipTickReason.Loading;
-            try
-            {
-                newPlayer.myRb.isKinematic = true;
-            }
-            catch (Exception e) { }
-
-            // Load the new level scenery
+            // 3. Load the new level scenery. The server will re-add players.
             LevelLoader.LoadLevel(nextConfig.GameLevel);
-            // Tell the server we are ready for the new round
+            
+            // 4. Wait for 5 seconds for the splash screen to display.
+            yield return new WaitForSeconds(5f);
+            
+            // 5. Tell the server we have finished loading the assets.
             NetClient.SendMsg(MessagePacker.PackPlayerLoadedMessage());
+            Debug.Log("Client has loaded level and sent packet to server.");
 
-            // Give the level a moment to load
-            yield return new WaitForSeconds(5);
-
+            // 6. Hide the loading screen. The player is still frozen at this point.
             loadingScreen.enabled = false;
-
-
-
-            yield return new WaitForSeconds(5);
-            newPlayer.skipTick = PlayerHandler.SkipTickReason.None;
-            try
-            {
-                newPlayer.myRb.isKinematic = false;
-            }
-            catch (Exception e) { }
-
-
-
-
+            
+            // 7. The client's job is done. It now waits for the server to send an update
+            // that changes the player's SkipTickReason from 'Loading' to 'None', which will
+            // happen after all other players have loaded and the 5-second countdown ends.
         }
     }
 }
