@@ -14,8 +14,8 @@ namespace Network
         public GameMsgHandlerCommon msgHandlerCommon;
         public LevelLoader LevelLoader;
         public InGameGUIMgr guiMgr;
-        public GameObject CeilingSpikePrefab;
-    
+        public GameObject CeilingSpikePrefab, bubble1Prefab, bubble3Prefab;
+
         public RawImage loadingScreen;
         public Texture2D raceLoad, surviveLoad, ptsLoad, finalLoad, titleLoad;
         private PingSender pingSender;
@@ -25,7 +25,7 @@ namespace Network
         private List<Vector3[]> wavePaths;
         private void Start()
         {
-        
+
             pingSender = GetComponent<PingSender>();
             msgHandlerCommon = GetComponent<GameMsgHandlerCommon>();
             LevelLoader = GetComponent<LevelLoader>();
@@ -197,7 +197,7 @@ namespace Network
         private IEnumerator DoSceneChangeWork(byte[] msg)
         {
             var nextConfig = MessagePacker.UnpackChangeGameSceneMsg(msg);
-            
+
             // 1. Set the correct loading screen texture and show it.
             switch (nextConfig.GameLevel)
             {
@@ -232,20 +232,53 @@ namespace Network
 
             // 3. Load the new level scenery. The server will re-add players.
             LevelLoader.LoadLevel(nextConfig.GameLevel);
-            
+
             // 4. Wait for 5 seconds for the splash screen to display.
             yield return new WaitForSeconds(5f);
-            
+
             // 5. Tell the server we have finished loading the assets.
             NetClient.SendMsg(MessagePacker.PackPlayerLoadedMessage());
             Debug.Log("Client has loaded level and sent packet to server.");
 
             // 6. Hide the loading screen. The player is still frozen at this point.
             loadingScreen.enabled = false;
-            
+
             // 7. The client's job is done. It now waits for the server to send an update
             // that changes the player's SkipTickReason from 'Loading' to 'None', which will
             // happen after all other players have loaded and the 5-second countdown ends.
+        }
+
+        public void HandleAddBubbleMsg(byte[] msg)
+        {
+            var bubbleData = MessagePacker.UnPackNewBubbleMessage(msg);
+            var bubbType = bubbleData.bubbleScore == 3 ? bubble3Prefab : bubble1Prefab;
+            var newBubb = Instantiate(bubbType, new Vector3(bubbleData.posX, bubbleData.posY, bubbleData.posZ), Quaternion.identity, new InstantiateParameters
+            {
+                parent = LevelLoader.parentForItems.transform,
+                worldSpace = true
+            });
+            newBubb.GetComponent<BubbleID>().bubbleId = bubbleData.bubbleId;
+        }
+
+        internal void HandleRemoveBubbleMsg(byte[] msg)
+        {
+            uint bubbleId = MessagePacker.UnpackRemoveBubbleMessage(msg);
+            var allBubbles = GameObject.FindObjectsByType<BubbleID>(FindObjectsSortMode.None);
+            foreach (var bubble in allBubbles)
+            {
+                if (bubble.GetComponent<BubbleID>().bubbleId == bubbleId)
+                {
+                    Destroy(bubble.gameObject);
+                    return;
+                }
+            }
+
+        }
+
+        internal void HandleScoreUpdate(byte[] msg)
+        {
+            uint newScore = MessagePacker.UnpackPlayerScoreUpdateMessage(msg);
+            Debug.Log("New Score: " + newScore);
         }
     }
 }

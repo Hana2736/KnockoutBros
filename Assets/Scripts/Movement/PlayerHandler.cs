@@ -101,10 +101,10 @@ namespace Movement
         {
             timeBetweenPackets = Time.time - lastPakUpdate;
             lastPakUpdate = Time.time;
-            
+
             oldPos = transform.position;
             oldAngles = transform.eulerAngles;
-            
+
             networkPositionTarget = position;
             networkRotationTarget = rotation;
         }
@@ -151,7 +151,7 @@ namespace Movement
                 SetAnimState(currentAnim);
                 return;
             }
-            
+
             if (skipTick == SkipTickReason.Loading)
             {
                 SetAnimState(idle);
@@ -253,7 +253,8 @@ namespace Movement
             if (pointZone is not null && haveWeStartedYet)
             {
                 parentGameManager.OnPlayerScore(pointZone.pointsWorth, playerId);
-                Destroy(pointZone.gameObject);
+                Destroy(pointZone.transform.parent.gameObject);
+                parentGameManager.serverHandler.netServer.SendMessage(MessagePacker.PackRemoveBubbleMessage(other.GetComponentInParent<BubbleID>().bubbleId));
                 return;
             }
 
@@ -298,9 +299,9 @@ namespace Movement
                 camRight.y = 0;
                 camForward.Normalize();
                 camRight.Normalize();
-                
+
                 moveDirection = camForward * inputZ + camRight * inputX;
-                
+
                 if (moveDirection.magnitude > 0.1f)
                 {
                     var targetRotation = Quaternion.LookRotation(moveDirection.normalized);
@@ -308,22 +309,22 @@ namespace Movement
                         rotationSpeed * Time.deltaTime));
                 }
             }
-            
+
             if (moveDirection.magnitude > 0)
             {
                 var velocity = myRb.linearVelocity;
-                moveDirection.Normalize(); 
+                moveDirection.Normalize();
                 var targetVelocity = Vector3.zero;
                 targetVelocity.x += moveDirection.x * maxSpeed;
                 targetVelocity.z += moveDirection.z * maxSpeed;
-                
+
                 var velocityChange = targetVelocity - new Vector3(velocity.x, 0, velocity.z);
-                
+
                 velocityChange = Vector3.ClampMagnitude(velocityChange, acceleration * Time.deltaTime);
-                
+
                 velocity.x += velocityChange.x;
                 velocity.z += velocityChange.z;
-                
+
                 velocity.x = Mathf.Clamp(velocity.x, -maxSpeed, maxSpeed);
                 velocity.z = Mathf.Clamp(velocity.z, -maxSpeed, maxSpeed);
                 myRb.linearVelocity = velocity;
@@ -371,14 +372,14 @@ namespace Movement
             var startEuler = startRotation.eulerAngles;
 
             yield return new WaitForSeconds(1f);
-            
+
             while (elapsedTime < recoveryDuration)
             {
                 var t = elapsedTime / recoveryDuration;
                 transform.rotation = Quaternion.Slerp(startRotation, Quaternion.Euler(0, startEuler.y, 0), t);
-                
+
                 elapsedTime += Time.deltaTime;
-                
+
                 yield return null;
             }
 

@@ -7,12 +7,12 @@ using Util;
 public class WaveGenerator : MonoBehaviour
 {
     public GameObject wavePrefab;
-    float timeToReachMaxRate = 120f;
+    float timeToReachMaxRate = 60f;
     float initialMaxSpawnDelay = 8f;
-    float finalMaxSpawnDelay = 5f;
+    float finalMaxSpawnDelay = 4f;
     float initialMinSpawnDelay = 4f;
 
-    float finalMinSpawnDelay = 3f;
+    float finalMinSpawnDelay = 1.7f;
     private List<Vector3[]> paths;
     private NetServer netServer; // <-- Add reference to the server
 

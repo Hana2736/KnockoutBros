@@ -52,7 +52,7 @@ namespace Network
             return retBlock;
         }
 
-          [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct NewWaveMessage
         {
             public int pathIndex;
@@ -62,7 +62,7 @@ namespace Network
         public static byte[] PackNewWaveMessage(NewWaveMessage message)
         {
             var messageID = PacketTypes.PacketType.SpawnWaterWave;
-            
+
             var messageSize = sizeof(int) + sizeof(float);
             var retBlock = WriteHeader(messageID, (uint)messageSize);
 
@@ -134,7 +134,7 @@ namespace Network
             BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), playerId);
             return retBlock;
         }
-        
+
 
         public static byte[] PackPlayerLoadedMessage()
         {
@@ -144,14 +144,14 @@ namespace Network
             Debug.Log("Sending player loaded message-stage: retblock created");
             return retBlock;
         }
-        
+
         public static byte[] PackStartRoundMessage()
         {
             var messageID = PacketTypes.PacketType.StartRound;
             var retBlock = WriteHeader(messageID, 0);
             return retBlock;
         }
-        
+
         public static uint UnpackSendClientIDMessage(byte[] msg)
         {
             return BitConverter.ToUInt32(msg, headerLen);
@@ -173,7 +173,7 @@ namespace Network
             BitConverter.TryWriteBytes(retBlock.AsSpan(1, sizeof(uint)), dataLen);
             return retBlock;
         }
-        
+
         public static uint UnpackPlayerEliminatedMessage(byte[] msg)
         {
             return BitConverter.ToUInt32(msg, headerLen);
@@ -186,7 +186,7 @@ namespace Network
             BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), playerId);
             return retBlock;
         }
-        
+
         public static uint UnpackPlayerQualifiedMessage(byte[] msg)
         {
             return BitConverter.ToUInt32(msg, headerLen);
@@ -199,7 +199,7 @@ namespace Network
             BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), playerId);
             return retBlock;
         }
-        
+
         public static uint UnpackPlayerScoreUpdateMessage(byte[] msg)
         {
             return BitConverter.ToUInt32(msg, headerLen);
@@ -212,11 +212,11 @@ namespace Network
             BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), newScore);
             return retBlock;
         }
-        
+
         public static byte[] PackChangeGameSceneMsg(NewGameLevelMessage message)
         {
             var messageID = PacketTypes.PacketType.ChangeGameScene;
-            
+
             var messageSize = 2;
             var retBlock = WriteHeader(messageID, (uint)messageSize);
 
@@ -238,31 +238,57 @@ namespace Network
             Marshal.FreeHGlobal(structPointer);
             return returned;
         }
-        
-        
+
+
+        public static byte[] PackNewBubbleMessage(NewBubbleMessage message)
+        {
+            var messageID = PacketTypes.PacketType.SpawnBubble;
+
+            var messageSize = sizeof(uint) + sizeof(uint) + sizeof(float) * 3;
+            var retBlock = WriteHeader(messageID, (uint)messageSize);
+
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.StructureToPtr(message, structPointer, true);
+            Marshal.Copy(structPointer, retBlock, headerLen, messageSize);
+            Marshal.FreeHGlobal(structPointer);
+
+            return retBlock;
+        }
+
+        public static NewBubbleMessage UnPackNewBubbleMessage(byte[] msg)
+        {
+            var messageSize = sizeof(uint) + sizeof(uint) + sizeof(float) * 3;
+            NewBubbleMessage returned;
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.Copy(msg, headerLen, structPointer, messageSize);
+            returned = Marshal.PtrToStructure<NewBubbleMessage>(structPointer);
+            Marshal.FreeHGlobal(structPointer);
+            return returned;
+        }
+
         [StructLayout(LayoutKind.Sequential)]
-public struct PlayerUpdateMessage
-{
-    public uint playerID;
+        public struct PlayerUpdateMessage
+        {
+            public uint playerID;
 
-    public float positionX,
-        positionY,
-        positionZ,
-        rotationX,
-        rotationY,
-        rotationZ;
+            public float positionX,
+                positionY,
+                positionZ,
+                rotationX,
+                rotationY,
+                rotationZ;
 
-    public int animId;
-    public byte skipTickReason; // Add this line
-}
-        
+            public int animId;
+            public byte skipTickReason; // Add this line
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         public struct NewGameLevelMessage
         {
             public GameManager.RoundType RoundType;
             public GameManager.GameLevel GameLevel;
         }
-        
+
         [StructLayout(LayoutKind.Sequential)]
         public struct NewBubbleMessage
         {
@@ -270,7 +296,7 @@ public struct PlayerUpdateMessage
             public uint bubbleScore;
             public float posX, posY, posZ;
         }
-        
+
         [StructLayout(LayoutKind.Sequential)]
         public struct RainSpikeMessage
         {
@@ -280,7 +306,7 @@ public struct PlayerUpdateMessage
         public static byte[] PackRainSpikeMessage(RainSpikeMessage msg)
         {
             var messageID = PacketTypes.PacketType.SpawnCeilSpike;
-            
+
             var messageSize = sizeof(float) * 2;
             var retBlock = WriteHeader(messageID, (uint)messageSize);
 
@@ -291,7 +317,7 @@ public struct PlayerUpdateMessage
 
             return retBlock;
         }
-        
+
         public static RainSpikeMessage UnpackRainSpikeMsg(byte[] msg)
         {
             var messageSize = sizeof(float) * 2;
@@ -302,5 +328,20 @@ public struct PlayerUpdateMessage
             Marshal.FreeHGlobal(structPointer);
             return returned;
         }
+
+        public static uint UnpackRemoveBubbleMessage(byte[] msg)
+        {
+            return BitConverter.ToUInt32(msg, headerLen);
+        }
+
+        public static byte[] PackRemoveBubbleMessage(uint bubbleId)
+        {
+            var messageID = PacketTypes.PacketType.RemoveBubble;
+            var retBlock = WriteHeader(messageID, sizeof(uint));
+            BitConverter.TryWriteBytes(retBlock.AsSpan(headerLen, sizeof(uint)), bubbleId);
+            return retBlock;
+        }
+
+
     }
 }

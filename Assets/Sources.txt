@@ -7,3 +7,8 @@ Textures:
 UI Font: https://designworklife.com/tools/lego-font-generator-create-download-free-lego-text/
 Skybox: ChatGPT image gen based on https://opengameart.org/content/beach-skyboxes
 Lego Brick texture: https://www.clipartmax.com/middle/m2i8Z5K9K9A0K9A0_red-small-lego-brick-clip-art-circle/
+
+Music:
+AI Generated at Eleven Labs
+
+Portions of the code were "improved" with the Gemini Code Assist VSCode plugin but all coding design is my own.

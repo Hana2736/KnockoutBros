@@ -1355,6 +1355,8 @@ MonoBehaviour:
   LevelLoader: {fileID: 0}
   guiMgr: {fileID: 0}
   CeilingSpikePrefab: {fileID: 4937498481682347766, guid: dc04473fb1415bfa1986ddc0c8776f16, type: 3}
+  bubble1Prefab: {fileID: 8973074678198203583, guid: a90187f66a7493630b5ee048fd84978b, type: 3}
+  bubble3Prefab: {fileID: 8973074678198203583, guid: 6ffc4e0f15985eced8e78dd2710f10d1, type: 3}
   loadingScreen: {fileID: 1906347941}
   raceLoad: {fileID: 2800000, guid: c937e74c43f9843d3ae7ca80a7b65c78, type: 3}
   surviveLoad: {fileID: 2800000, guid: 3a88c3be915b466498d0abaec26ee618, type: 3}

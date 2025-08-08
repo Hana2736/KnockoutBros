@@ -30,7 +30,7 @@ namespace Util
 
         public static uint targetPlayerCount = 30;
 
-        public static float playersQualifyPerRoundPercent = 0.30f;
+        public static float playersQualifyPerRoundPercent = 0.60f;
 
         public GameLevel currentLevel;
         public RoundType currentRoundType;
@@ -96,11 +96,11 @@ namespace Util
                 RoundType = RoundType.Survival,
                 GameLevel = GameLevel.SurvivalLevel
             });
-            //       roundOrder.Enqueue(new MessagePacker.NewGameLevelMessage
-            //        {
-            //            RoundType = RoundType.Points,
-            //            GameLevel = GameLevel.PointsLevel
-            //        });
+            roundOrder.Enqueue(new MessagePacker.NewGameLevelMessage
+            {
+                RoundType = RoundType.Points,
+                GameLevel = GameLevel.PointsLevel
+            });
             roundOrder.Enqueue(new MessagePacker.NewGameLevelMessage
             {
                 RoundType = RoundType.Survival,
@@ -325,12 +325,12 @@ namespace Util
                 return;
             playersLoaded++;
             if (playersLoaded < playersLoadedTarget) return;
-            
+
             Debug.Log("All players have loaded. Spreading them to spawners and starting final countdown.");
             waitingForLoadedPlayers = false;
 
             SpreadPlayers();
-            
+
             ready = true;
 
             switch (currentLevel)
@@ -361,7 +361,7 @@ namespace Util
                         break;
                     }
             }
-            
+
             StartCoroutine(UnlockPlayersIn5());
         }
 
@@ -389,21 +389,21 @@ namespace Util
                 {
                     // burn the cpu here
                 }
-                
+
                 alivePlayerIds.Add(nextClient);
-                
+
                 var newPlayer = serverHandler.msgHandlerCommon.AddNewPlayer(nextClient);
                 newPlayer.parentGameManager = this;
-                
+
                 if (nextClient > uint.MaxValue / 2) newPlayer.isBotPlayer = true;
-                
+
                 serverHandler.netServer.SendMessage(MessagePacker.PackAddPlayerMessage(nextClient));
-                
+
                 foreach (var playerId in alivePlayerIds)
                 {
                     if (playerId == nextClient)
                         continue;
-                    
+
                     serverHandler.netServer.SendMessage(nextClient, MessagePacker.PackAddPlayerMessage(playerId));
                 }
             }
@@ -416,9 +416,9 @@ namespace Util
                     RoundType = newType,
                     GameLevel = newLevel
                 }));
-            
+
             List<uint> playerIdsForNextRound;
-            
+
             if (currentRoundType == RoundType.Free)
             {
                 playerIdsForNextRound = alivePlayerIds.ToList();
@@ -427,21 +427,21 @@ namespace Util
             {
                 playerIdsForNextRound = qualifiedPlayerIds.ToList();
             }
-            
+
             qualifiedPlayerIds.Clear();
             alivePlayerIds.Clear();
-            
+
             foreach (var existingPlayer in serverHandler.msgHandlerCommon.idToPlayers.Values)
             {
                 if (existingPlayer != null) Destroy(existingPlayer.gameObject);
             }
             serverHandler.msgHandlerCommon.idToPlayers.Clear();
-            
+
             levelTimeRemaining = timeLimitsPerRound[newType];
             currentRoundType = newType;
             currentLevel = newLevel;
             levelLoader.LoadLevel(newLevel);
-            
+
             foreach (var playerId in playerIdsForNextRound)
             {
                 var newPlayer = serverHandler.msgHandlerCommon.AddNewPlayer(playerId);
@@ -449,10 +449,10 @@ namespace Util
                 if (playerId > uint.MaxValue / 2) newPlayer.isBotPlayer = true;
 
                 alivePlayerIds.Add(playerId);
-                
+
                 serverHandler.netServer.SendMessage(MessagePacker.PackAddPlayerMessage(playerId));
             }
-            
+
             // Only freeze players if the next level is NOT the menu/lobby.
             if (newLevel != GameLevel.MenuLevel)
             {
@@ -460,15 +460,15 @@ namespace Util
                 waitingForLoadedPlayers = true;
                 playersLoaded = 0;
                 playersLoadedTarget = 0;
-                
+
                 foreach (var playerId in alivePlayerIds)
                 {
                     var thisPlayer = serverHandler.msgHandlerCommon.idToPlayers[playerId];
                     Rigidbody playerRb = thisPlayer.GetComponent<Rigidbody>();
-                    
+
                     thisPlayer.skipTick = PlayerHandler.SkipTickReason.Loading;
                     if (playerRb != null) playerRb.isKinematic = true;
-                    
+
                     if (playerId < uint.MaxValue / 2)
                     {
                         playersLoadedTarget++;

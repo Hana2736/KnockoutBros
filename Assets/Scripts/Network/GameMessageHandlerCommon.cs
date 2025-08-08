@@ -149,11 +149,29 @@ namespace Network
 
                             break;
                         }
-                        case PacketTypes.PacketType.SpawnWaterWave:
+                    case PacketTypes.PacketType.SpawnWaterWave:
                         {
                             if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
                                 clientMsgHandler.HandleSpawnWaveMsg(msg);
-                                break;
+                            break;
+                        }
+                    case PacketTypes.PacketType.SpawnBubble:
+                        {
+                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                                clientMsgHandler.HandleAddBubbleMsg(msg);
+                            break;
+                        }
+                    case PacketTypes.PacketType.RemoveBubble:
+                        {
+                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                                clientMsgHandler.HandleRemoveBubbleMsg(msg);
+                            break;
+                        }
+                        case PacketTypes.PacketType.PlayerScoreUpdate:
+                        {
+                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                                clientMsgHandler.HandleScoreUpdate(msg);
+                            break;
                         }
 
                         /* case PacketTypes.PacketType.SecretKeyMessage:
@@ -180,7 +198,7 @@ namespace Network
         }
 
 
-    
+
 
         public void HandlePlayerUpdateMessage(uint clientId, byte[] msg)
         {
@@ -237,38 +255,38 @@ namespace Network
             }
         }
         public byte[] CreatePlayerUpdateMessage(uint clientId)
-{
-    // Debug.Log("Trying to send an update for "+clientId);
-    
-    // BULLETPROOF FIX: Add this check right at the top.
-    // If the player ID doesn't exist in the dictionary for any reason,
-    // we immediately stop and return an invalid packet instead of crashing.
-    if (!idToPlayers.ContainsKey(clientId))
-    {
-        return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
-    }
+        {
+            // Debug.Log("Trying to send an update for "+clientId);
 
-    var playerCode = idToPlayers[clientId];
-    if (!playerCode.readyForUpdates)
-        return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
-    
-    var position = playerCode.transform.position;
-    var rotation = playerCode.transform.eulerAngles;
-    var updTemplate = new MessagePacker.PlayerUpdateMessage
-    {
-        playerID = clientId,
-        positionX = position.x,
-        positionY = position.y,
-        positionZ = position.z,
-        rotationX = rotation.x,
-        rotationY = rotation.y,
-        rotationZ = rotation.z,
-        animId = playerCode.currentAnim,
-        skipTickReason = (byte)playerCode.skipTick // Add this line
-    };
+            // BULLETPROOF FIX: Add this check right at the top.
+            // If the player ID doesn't exist in the dictionary for any reason,
+            // we immediately stop and return an invalid packet instead of crashing.
+            if (!idToPlayers.ContainsKey(clientId))
+            {
+                return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
+            }
+
+            var playerCode = idToPlayers[clientId];
+            if (!playerCode.readyForUpdates)
+                return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
+
+            var position = playerCode.transform.position;
+            var rotation = playerCode.transform.eulerAngles;
+            var updTemplate = new MessagePacker.PlayerUpdateMessage
+            {
+                playerID = clientId,
+                positionX = position.x,
+                positionY = position.y,
+                positionZ = position.z,
+                rotationX = rotation.x,
+                rotationY = rotation.y,
+                rotationZ = rotation.z,
+                animId = playerCode.currentAnim,
+                skipTickReason = (byte)playerCode.skipTick // Add this line
+            };
 
 
-    return MessagePacker.PackPlayerUpdateMsg(updTemplate);
-}
+            return MessagePacker.PackPlayerUpdateMsg(updTemplate);
+        }
     }
 }

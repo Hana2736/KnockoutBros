@@ -465,7 +465,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetPosition: {fileID: 0}
-  botAction: 2
+  botAction: 1
 --- !u!1 &9106174265755658705
 GameObject:
   m_ObjectHideFlags: 0

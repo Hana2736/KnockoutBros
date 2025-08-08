@@ -1,6 +1,7 @@
 using System.Collections;
 using Tags;
 using UnityEngine;
+using Util;
 
 namespace Movement
 {
@@ -133,6 +134,8 @@ namespace Movement
         /// </summary>
         private IEnumerator UnstuckAndRetry(Vector3 originalTarget)
         {
+            if (LevelLoader.currLevel == GameManager.GameLevel.SurvivalLevel)
+                yield break;
             if (_isUnstucking) yield break; // Prevent this from running multiple times.
             _isUnstucking = true;
 

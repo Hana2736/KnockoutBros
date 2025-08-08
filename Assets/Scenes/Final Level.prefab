@@ -13994,6 +13994,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5eb56fef6c5ef60d4a4ad0f25eaee1e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  waypoints:
+  - {fileID: 8260019108182355198}
+  - {fileID: 8287437011768018001}
+  - {fileID: 3115651629099232108}
+  - {fileID: 1340848711529713439}
+  - {fileID: 3278286117634170430}
+  - {fileID: 4361179563894441008}
+  - {fileID: 4628378302743360463}
+  - {fileID: 2844999357755844314}
 --- !u!1 &4969924287005942824
 GameObject:
   m_ObjectHideFlags: 0
@@ -22930,9 +22939,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7987434073980024438}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.26, y: -0.43, z: -3.83}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: 0.40309337, z: -0, w: 0.91515887}
+  m_LocalPosition: {x: -3.72, y: -0.43, z: -4.73}
+  m_LocalScale: {x: 1.4861, y: 1.4861, z: 1.4861}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3907900309359882168}
