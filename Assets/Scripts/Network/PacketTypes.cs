@@ -14,6 +14,10 @@ public class PacketTypes
         ChangeGameScene,
         PlayerLoadedMessage,
         StartRound,
+        SpawnBubble,
+        RemoveBubble,
+        SpawnWaterWave,
+        SpawnCeilSpike,
         
         InvalidPacket
     }

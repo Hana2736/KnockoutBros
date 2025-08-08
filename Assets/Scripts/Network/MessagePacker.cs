@@ -52,6 +52,40 @@ namespace Network
             return retBlock;
         }
 
+          [StructLayout(LayoutKind.Sequential)]
+        public struct NewWaveMessage
+        {
+            public int pathIndex;
+            public float speed;
+        }
+
+        public static byte[] PackNewWaveMessage(NewWaveMessage message)
+        {
+            var messageID = PacketTypes.PacketType.SpawnWaterWave;
+            
+            var messageSize = sizeof(int) + sizeof(float);
+            var retBlock = WriteHeader(messageID, (uint)messageSize);
+
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.StructureToPtr(message, structPointer, true);
+            Marshal.Copy(structPointer, retBlock, headerLen, messageSize);
+            Marshal.FreeHGlobal(structPointer);
+
+            return retBlock;
+        }
+
+        public static NewWaveMessage UnpackNewWaveMessage(byte[] msg)
+        {
+            var messageSize = sizeof(int) + sizeof(float);
+            NewWaveMessage returned;
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.Copy(msg, headerLen, structPointer, messageSize);
+            returned = Marshal.PtrToStructure<NewWaveMessage>(structPointer);
+            Marshal.FreeHGlobal(structPointer);
+            return returned;
+        }
+
+
         public static Guid UnpackSecretKeyMsg(byte[] msg)
         {
             return new Guid(msg.AsSpan(headerLen, msg.Length - headerLen));
@@ -64,7 +98,8 @@ namespace Network
             var messageID = PacketTypes.PacketType.PlayerUpdateMessage;
 
 
-            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 3 + 2));
+            var messageSize = sizeof(uint) + (sizeof(float) * 6) + sizeof(int) + sizeof(byte);
+
             var retBlock = WriteHeader(messageID, (uint)messageSize);
 
             var structPointer = Marshal.AllocHGlobal(messageSize);
@@ -77,7 +112,8 @@ namespace Network
 
         public static PlayerUpdateMessage UnpackPlayerUpdateMsg(byte[] msg)
         {
-            var messageSize = sizeof(uint) + (sizeof(float) * (3 + 3 + 3 + 3 + 2));
+            var messageSize = sizeof(uint) + (sizeof(float) * 6) + sizeof(int) + sizeof(byte);
+
             PlayerUpdateMessage returned;
             var structPointer = Marshal.AllocHGlobal(messageSize);
             Marshal.Copy(msg, headerLen, structPointer, messageSize);
@@ -204,44 +240,67 @@ namespace Network
         }
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         [StructLayout(LayoutKind.Sequential)]
-        public struct PlayerUpdateMessage
-        {
-            public uint playerID;
+public struct PlayerUpdateMessage
+{
+    public uint playerID;
 
-            public float positionX,
-                positionY,
-                positionZ,
-                rotationX,
-                rotationY,
-                rotationZ,
-                velocityX,
-                velocityY,
-                velocityZ,
-                angVelX,
-                angVelY,
-                angVelZ;
+    public float positionX,
+        positionY,
+        positionZ,
+        rotationX,
+        rotationY,
+        rotationZ;
 
-            public float inputX, inputZ;
-        }
+    public int animId;
+    public byte skipTickReason; // Add this line
+}
         
         [StructLayout(LayoutKind.Sequential)]
         public struct NewGameLevelMessage
         {
             public GameManager.RoundType RoundType;
             public GameManager.GameLevel GameLevel;
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct NewBubbleMessage
+        {
+            public uint bubbleId;
+            public uint bubbleScore;
+            public float posX, posY, posZ;
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RainSpikeMessage
+        {
+            public float locationX, locationZ;
+        }
+
+        public static byte[] PackRainSpikeMessage(RainSpikeMessage msg)
+        {
+            var messageID = PacketTypes.PacketType.SpawnCeilSpike;
+            
+            var messageSize = sizeof(float) * 2;
+            var retBlock = WriteHeader(messageID, (uint)messageSize);
+
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.StructureToPtr(msg, structPointer, true);
+            Marshal.Copy(structPointer, retBlock, headerLen, messageSize);
+            Marshal.FreeHGlobal(structPointer);
+
+            return retBlock;
+        }
+        
+        public static RainSpikeMessage UnpackRainSpikeMsg(byte[] msg)
+        {
+            var messageSize = sizeof(float) * 2;
+            RainSpikeMessage returned;
+            var structPointer = Marshal.AllocHGlobal(messageSize);
+            Marshal.Copy(msg, headerLen, structPointer, messageSize);
+            returned = Marshal.PtrToStructure<RainSpikeMessage>(structPointer);
+            Marshal.FreeHGlobal(structPointer);
+            return returned;
         }
     }
 }

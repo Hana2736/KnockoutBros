@@ -1,0 +1,9 @@
+Client Networking:
+unity-websocket: https://github.com/mikerochip/unity-websocket
+UniTask: https://github.com/Cysharp/UniTask
+Websockify: https://github.com/novnc/websockify
+
+Textures:
+UI Font: https://designworklife.com/tools/lego-font-generator-create-download-free-lego-text/
+Skybox: ChatGPT image gen based on https://opengameart.org/content/beach-skyboxes
+Lego Brick texture: https://www.clipartmax.com/middle/m2i8Z5K9K9A0K9A0_red-small-lego-brick-clip-art-circle/
