@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using Util;
 
 namespace Movement
 {
@@ -24,6 +26,11 @@ namespace Movement
         private float yaw = 0.0f;   // Rotation around the Y axis (left/right)
         private float pitch = 0.0f; // Rotation around the X axis (up/down)
 
+        public Animation fallbackPath;
+        
+        
+        
+        
         // Velocity reference for SmoothDamp
         private Vector3 currentVelocity;
 
@@ -32,17 +39,34 @@ namespace Movement
             // Lock and hide the cursor for a better gameplay experience
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+            fallbackPath = GetComponent<Animation>();
+            playingLevel = GameManager.GameLevel.NullLevel;
         }
 
+        private Util.GameManager.GameLevel playingLevel;
         // LateUpdate is called after all Update functions.
         // This is the best place for camera logic to avoid jitter.
         void LateUpdate()
         {
-            if (target == null)
+            if (target == null || !target.gameObject.activeSelf)
             {
+                if(fallbackPath.isPlaying && LevelLoader.currLevel == playingLevel)
+                    return;
+                playingLevel = LevelLoader.currLevel;
                 //Debug.LogWarning("Camera Controller has no target assigned.");
+                try
+                {
+                    fallbackPath.Play(playingLevel == GameManager.GameLevel.RaceLevel ? "RaceLevelPath" : "SurvivalPath");
+                }
+                catch (Exception e)
+                {
+                    //good, honestly...
+                }
+                
                 return;
             }
+
+            fallbackPath.Stop();
 
             // --- Handle Mouse Input for Rotation ---
             yaw += Input.GetAxis("Mouse X") * mouseSensitivity;

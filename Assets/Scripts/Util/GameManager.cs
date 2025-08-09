@@ -16,7 +16,8 @@ namespace Util
             RaceLevel,
             SurvivalLevel,
             PointsLevel,
-            FinalLevel
+            FinalLevel,
+            NullLevel
         }
 
 
@@ -88,6 +89,11 @@ namespace Util
             roundOrder = new Queue<MessagePacker.NewGameLevelMessage>();
             roundOrder.Enqueue(new MessagePacker.NewGameLevelMessage
             {
+                RoundType = RoundType.Free,
+                GameLevel = GameLevel.MenuLevel
+            });
+            roundOrder.Enqueue(new MessagePacker.NewGameLevelMessage
+            {
                 RoundType = RoundType.Race,
                 GameLevel = GameLevel.RaceLevel
             });
@@ -106,11 +112,6 @@ namespace Util
                 RoundType = RoundType.Survival,
                 GameLevel = GameLevel.FinalLevel
             });
-            roundOrder.Enqueue(new MessagePacker.NewGameLevelMessage
-            {
-                RoundType = RoundType.Free,
-                GameLevel = GameLevel.MenuLevel
-            });
 
 
             // playersPassExpectedThisRound = 999; // REMOVE this line from here
@@ -120,6 +121,13 @@ namespace Util
 
             roundShouldEnd = false;
             playerPointsScores = new Dictionary<uint, uint>();
+
+            
+            
+
+
+
+
             ready = true;
         }
 
@@ -169,6 +177,19 @@ namespace Util
             else
             {
                 roundShouldEnd = false;
+                if (roundOrder.Count == 0)
+                {
+                    Reset();
+                    ///re-add all recently pinged players
+                    foreach (var playerTime in serverHandler.timeOfLastPing)
+                    {
+                        if (Time.time - playerTime.Value < 10f)
+                        {
+                            serverHandler.netServer.newClientsForGame.Enqueue(playerTime.Key);
+                        }
+                    }
+                }
+                    
                 var nextLevel = roundOrder.Dequeue();
                 ChangeGameType(nextLevel.RoundType, nextLevel.GameLevel);
             }

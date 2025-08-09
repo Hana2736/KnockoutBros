@@ -13,12 +13,13 @@ namespace Network
         public NetServer netServer;
         public GameMsgHandlerCommon msgHandlerCommon;
         public GameManager gameManager;
-        
-        
+
+        public Dictionary<uint, float> timeOfLastPing;
         
         public void Start()
         {
             netServer = GetComponent<NetServer>();
+            timeOfLastPing = new();
             if (NetServer.BuiltRunningMode != NetServer.RunningMode.Server)
                 return;
             gameManager = gameObject.AddComponent<GameManager>();
@@ -34,12 +35,13 @@ namespace Network
             if (NetServer.BuiltRunningMode != NetServer.RunningMode.Server)
                 return;
             
-            // the server accepted a new client so we need to add them to the world
+            
             
         }
 
         public void HandlePingMsg(uint clientId, byte[] msg)
         {
+            timeOfLastPing[clientId] = Time.time;
             netServer.SendMessage(clientId, msg);
         }
 

@@ -15,7 +15,7 @@ namespace Network
             Client
         }
 
-        public static readonly RunningMode BuiltRunningMode = RunningMode.Server;
+        public static readonly RunningMode BuiltRunningMode = RunningMode.Client;
 
         public uint nextClientID;
         public ConcurrentDictionary<TcpClient, uint> clientToID;
@@ -24,8 +24,10 @@ namespace Network
 
         public ConcurrentDictionary<uint, ConcurrentQueue<byte[]>> messageSendQueue;
 
+
         public ConcurrentQueue<uint> newClientsForGame;
         public ConcurrentDictionary<uint, Guid> secretKeys;
+        
 
 
         public void Start()
