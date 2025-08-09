@@ -5,7 +5,7 @@ namespace Util
     public class LevelLoader : MonoBehaviour
     {
         public static GameObject parentForItems;
-        public static GameManager.GameLevel currLevel;
+        public static GameManager.GameLevel currLevel = GameManager.GameLevel.MenuLevel;
 
         public GameObject MenuLevelWorldPrefab,
             RaceLevelWorldPrefab,

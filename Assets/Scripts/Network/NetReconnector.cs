@@ -35,7 +35,7 @@ public class NetReconnector : MonoBehaviour
         coroRunning = true;
         if (secretKey == Guid.Empty)
         {
-            DialogMgr.ShowDialog("Connection failed!", "Refresh the page and try again.");
+            DialogMgr.ShowDialog("Server connection error!", "The connection to the server was lost.\nPlease try re-launching the game.");
             yield break;
         }
 

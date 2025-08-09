@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Movement;
@@ -54,15 +52,17 @@ namespace Util
         public uint nextBotId = uint.MaxValue;
         public uint playersLoaded;
         public uint playersLoadedTarget = 999;
+        public bool ready;
         public HashSet<uint> alivePlayerIds;
+        private uint lastPlayersQualSent = 9999;
+
+        private uint lastSecondCountdown = 16;
         public Dictionary<uint, uint> playerPointsScores;
         public HashSet<uint> qualifiedPlayerIds;
-        public bool ready;
         public HashSet<uint> readyPlayers;
 
         private Queue<MessagePacker.NewGameLevelMessage> roundOrder;
         private bool roundShouldEnd;
-
 
 
         private float sendUpdatesTimer;
@@ -122,11 +122,7 @@ namespace Util
             roundShouldEnd = false;
             playerPointsScores = new Dictionary<uint, uint>();
 
-            
-            
-
-
-
+            serverHandler.netServer.SendMessage(MessagePacker.PackStringMsg("Step on the green pad to play!"));
 
             ready = true;
         }
@@ -153,25 +149,25 @@ namespace Util
                 switch (currentRoundType)
                 {
                     case RoundType.Free:
-                        {
-                            UpdateInFreeStage();
-                            break;
-                        }
+                    {
+                        UpdateInFreeStage();
+                        break;
+                    }
                     case RoundType.Race:
-                        {
-                            UpdateInRaceStage();
-                            break;
-                        }
+                    {
+                        UpdateInRaceStage();
+                        break;
+                    }
                     case RoundType.Survival:
-                        {
-                            UpdateInSurvivalStage();
-                            break;
-                        }
+                    {
+                        UpdateInSurvivalStage();
+                        break;
+                    }
                     case RoundType.Points:
-                        {
-                            UpdateInPointsStage();
-                            break;
-                        }
+                    {
+                        UpdateInPointsStage();
+                        break;
+                    }
                 }
             }
             else
@@ -182,14 +178,10 @@ namespace Util
                     Reset();
                     ///re-add all recently pinged players
                     foreach (var playerTime in serverHandler.timeOfLastPing)
-                    {
                         if (Time.time - playerTime.Value < 10f)
-                        {
                             serverHandler.netServer.newClientsForGame.Enqueue(playerTime.Key);
-                        }
-                    }
                 }
-                    
+
                 var nextLevel = roundOrder.Dequeue();
                 ChangeGameType(nextLevel.RoundType, nextLevel.GameLevel);
             }
@@ -218,25 +210,22 @@ namespace Util
                 MessagePacker.PackPlayerScoreUpdateMessage(playerPointsScores[playerId]));
         }
 
-        private uint lastSecondCountdown = 16;
-        private uint lastPlayersQualSent = 9999;
         public void UpdateInFreeStage()
         {
             AddNewPlayers();
-            if (readyPlayers.Count > 0 && !startMatching)
-            {
-                startMatching = true;
-                levelTimeRemaining = 15f;
-            }
-
+            if (readyPlayers.Count > 0 && !startMatching) startMatching = true;
+            //levelTimeRemaining = 15f;
             if (startMatching)
             {
                 levelTimeRemaining -= Time.deltaTime;
                 if (lastSecondCountdown != (uint)levelTimeRemaining)
                 {
-                    serverHandler.netServer.SendMessage(MessagePacker.PackStringMsg("Starting in "+(uint)levelTimeRemaining));
+                    serverHandler.netServer.SendMessage(
+                        MessagePacker.PackStringMsg("Starting in " + (uint)levelTimeRemaining));
                     lastSecondCountdown = (uint)levelTimeRemaining;
                 }
+
+                Debug.Log("time til start = " + levelTimeRemaining);
                 if (levelTimeRemaining > 0f)
                     return;
                 startMatching = false;
@@ -260,13 +249,19 @@ namespace Util
 
         public void UpdateInRaceStage()
         {
-            SendPlayersCountMsg("Players finished: ", (uint)qualifiedPlayerIds.Count);
+            var messageString = "Level Over!";
+            if (qualifiedPlayerIds.Count != playersPassExpectedThisRound)
+                messageString = "Players Finished: " + qualifiedPlayerIds.Count + " / " + playersPassExpectedThisRound; 
+            SendPlayersCountMsg(messageString);
             CheckIfQualEnd();
         }
 
         public void UpdateInPointsStage()
         {
-            SendPlayersCountMsg("Players finished: ", (uint)qualifiedPlayerIds.Count);
+            var messageString = "Level Over!";
+            if (qualifiedPlayerIds.Count != playersPassExpectedThisRound)
+                messageString = "Players Finished: " + qualifiedPlayerIds.Count + " / " + playersPassExpectedThisRound; 
+            SendPlayersCountMsg(messageString);
             foreach (var playerScores in playerPointsScores)
             {
                 if (!alivePlayerIds.Contains(playerScores.Key))
@@ -296,7 +291,15 @@ namespace Util
         public void UpdateInSurvivalStage()
         {
             //Debug.Log("Alive: " + alivePlayerIds.Count+", Wanted Remaining: "+playersPassExpectedThisRound);
-            SendPlayersCountMsg("Players to knock out: ", (uint)(targetPlayerCount - playersPassExpectedThisRound - alivePlayerIds.Count));
+            var diffNum = (uint)(alivePlayerIds.Count - playersPassExpectedThisRound);
+            var messageString = diffNum switch
+            {
+                1 => "Outlive " + diffNum + " player!",
+                > 1 => "Outlive " + diffNum + " players!",
+                _ => "Level Over!"
+            };
+
+            SendPlayersCountMsg(messageString);
             if (alivePlayerIds.Count > playersPassExpectedThisRound)
                 return;
             foreach (var playerId in alivePlayerIds.ToList())
@@ -305,12 +308,12 @@ namespace Util
             roundShouldEnd = true;
         }
 
-        public void SendPlayersCountMsg(string prefix, uint number)
+        public void SendPlayersCountMsg(string msg)
         {
             if (lastPlayersQualSent != alivePlayerIds.Count)
             {
-                serverHandler.netServer.SendMessage(MessagePacker.PackStringMsg(prefix+number));
-                lastPlayersQualSent = number;
+                serverHandler.netServer.SendMessage(MessagePacker.PackStringMsg(msg));
+                lastPlayersQualSent = (uint)alivePlayerIds.Count;
             }
         }
 
@@ -365,61 +368,53 @@ namespace Util
 
         public void HumanPlayerIsReady()
         {
+            Debug.Log("Human is ready");
             if (ready || !waitingForLoadedPlayers)
                 return;
             playersLoaded++;
             if (playersLoaded < playersLoadedTarget) return;
 
-            Debug.Log("All players have loaded. Spreading them to spawners and starting final countdown.");
             waitingForLoadedPlayers = false;
 
+            foreach (var player in alivePlayerIds)
+            {
+                serverHandler.netServer.SendMessage(MessagePacker.PackAddPlayerMessage(player));
+            }
+            
+            
+            
+            
             SpreadPlayers();
 
             ready = true;
-
+            lastPlayersQualSent = 999;
             switch (currentLevel)
             {
                 case GameLevel.MenuLevel:
-                    {
-                        Reset();
-                        break;
-                    }
+                {
+                    Reset();
+                    break;
+                }
                 case GameLevel.RaceLevel:
-                    {
-                        SetupRaceRound();
-                        break;
-                    }
+                {
+                    SetupRaceRound();
+                    break;
+                }
                 case GameLevel.SurvivalLevel:
-                    {
-                        SetupSurvivalRound();
-                        break;
-                    }
+                {
+                    SetupSurvivalRound();
+                    break;
+                }
                 case GameLevel.PointsLevel:
-                    {
-                        SetupPointsRound();
-                        break;
-                    }
+                {
+                    SetupPointsRound();
+                    break;
+                }
                 case GameLevel.FinalLevel:
-                    {
-                        SetupFinalRound();
-                        break;
-                    }
-            }
-
-            StartCoroutine(UnlockPlayersIn5());
-        }
-
-
-        public IEnumerator UnlockPlayersIn5()
-        {
-            yield return new WaitForSeconds(5f);
-            Debug.Log("Unlocking all players now.");
-            for (var index = 0; index < alivePlayerIds.Count; index++)
-            {
-                var playerId = alivePlayerIds.ToList()[index];
-                var thisPlayer = serverHandler.msgHandlerCommon.idToPlayers[playerId];
-                thisPlayer.skipTick = PlayerHandler.SkipTickReason.None;
-                thisPlayer.myRb.isKinematic = false;
+                {
+                    SetupFinalRound();
+                    break;
+                }
             }
         }
 
@@ -452,6 +447,7 @@ namespace Util
                 }
             }
         }
+
         private void ChangeGameType(RoundType newType, GameLevel newLevel)
         {
             serverHandler.netServer.SendMessage(MessagePacker.PackChangeGameSceneMsg(
@@ -464,21 +460,16 @@ namespace Util
             List<uint> playerIdsForNextRound;
 
             if (currentRoundType == RoundType.Free)
-            {
                 playerIdsForNextRound = alivePlayerIds.ToList();
-            }
             else
-            {
                 playerIdsForNextRound = qualifiedPlayerIds.ToList();
-            }
 
             qualifiedPlayerIds.Clear();
             alivePlayerIds.Clear();
 
             foreach (var existingPlayer in serverHandler.msgHandlerCommon.idToPlayers.Values)
-            {
-                if (existingPlayer != null) Destroy(existingPlayer.gameObject);
-            }
+                if (existingPlayer != null)
+                    Destroy(existingPlayer.gameObject);
             serverHandler.msgHandlerCommon.idToPlayers.Clear();
 
             levelTimeRemaining = timeLimitsPerRound[newType];
@@ -494,11 +485,11 @@ namespace Util
 
                 alivePlayerIds.Add(playerId);
 
-                serverHandler.netServer.SendMessage(MessagePacker.PackAddPlayerMessage(playerId));
+                
             }
 
             // Only freeze players if the next level is NOT the menu/lobby.
-            if (newLevel != GameLevel.MenuLevel)
+            if (true)//newLevel != GameLevel.MenuLevel)
             {
                 ready = false;
                 waitingForLoadedPlayers = true;
@@ -508,15 +499,12 @@ namespace Util
                 foreach (var playerId in alivePlayerIds)
                 {
                     var thisPlayer = serverHandler.msgHandlerCommon.idToPlayers[playerId];
-                    Rigidbody playerRb = thisPlayer.GetComponent<Rigidbody>();
+                    var playerRb = thisPlayer.GetComponent<Rigidbody>();
 
                     thisPlayer.skipTick = PlayerHandler.SkipTickReason.Loading;
                     if (playerRb != null) playerRb.isKinematic = true;
 
-                    if (playerId < uint.MaxValue / 2)
-                    {
-                        playersLoadedTarget++;
-                    }
+                    if (playerId < uint.MaxValue / 2) playersLoadedTarget++;
                 }
             }
             else

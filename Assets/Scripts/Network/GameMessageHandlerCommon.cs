@@ -253,11 +253,17 @@ namespace Network
         {
             try
             {
-                if (!idToPlayers.TryGetValue(clientId, out var playerCode))
-                    return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
-
+                if (!idToPlayers.ContainsKey(clientId))
+                    
+                        return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
+                   
+                
+                
+                var playerCode = idToPlayers[clientId];
                 if (!playerCode.readyForUpdates)
                     return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
+
+              
 
                 var position = playerCode.transform.position;
                 var rotation = playerCode.transform.eulerAngles;

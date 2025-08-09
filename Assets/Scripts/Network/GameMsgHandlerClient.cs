@@ -197,7 +197,8 @@ namespace Network
         private IEnumerator DoSceneChangeWork(byte[] msg)
         {
             var nextConfig = MessagePacker.UnpackChangeGameSceneMsg(msg);
-
+            
+            
             // 1. Set the correct loading screen texture and show it.
             switch (nextConfig.GameLevel)
             {
@@ -217,21 +218,28 @@ namespace Network
                     loadingScreen.texture = titleLoad;
                     break;
             }
-            loadingScreen.enabled = true;
-            if (guiMgr != null) guiMgr.HideBanner();
+            
 
             // 2. Eradicate all existing player objects on the client.
             foreach (var player in msgHandlerCommon.idToPlayers.Values)
             {
                 if (player != null)
                 {
+                    player.gameObject.SetActive(false);
                     Destroy(player.gameObject);
                 }
             }
             msgHandlerCommon.idToPlayers.Clear();
 
+            if(LevelLoader.currLevel != GameManager.GameLevel.MenuLevel)
+                yield return new WaitForSeconds(3.5f);
+            
+            
+            
             // 3. Load the new level scenery. The server will re-add players.
             LevelLoader.LoadLevel(nextConfig.GameLevel);
+            loadingScreen.enabled = true;
+            if (guiMgr != null) guiMgr.HideBanner();
 
             // 4. Wait for 5 seconds for the splash screen to display.
             yield return new WaitForSeconds(5f);
