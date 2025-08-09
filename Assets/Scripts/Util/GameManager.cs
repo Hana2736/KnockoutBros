@@ -405,6 +405,7 @@ namespace Util
                 catch (Exception e)
                 {
                 }
+                thisPlayer.skipTick = PlayerHandler.SkipTickReason.None;
 
                 serverHandler.netServer.SendMessage(serverHandler.msgHandlerCommon.CreatePlayerUpdateMessage(playerId));
                 thisPlayer.haveWeStartedYet = true;

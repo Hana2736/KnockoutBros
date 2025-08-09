@@ -665,7 +665,7 @@ PlayerSettings:
   platformArchitecture: {}
   scriptingBackend:
     Android: 1
-    Server: 1
+    Server: 0
   il2cppCompilerConfiguration:
     Server: 2
     WebGL: 2

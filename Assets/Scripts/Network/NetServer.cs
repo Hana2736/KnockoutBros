@@ -16,7 +16,7 @@ namespace Network
             Client
         }
 
-        public static readonly RunningMode BuiltRunningMode = RunningMode.Client;
+        public static readonly RunningMode BuiltRunningMode = RunningMode.Server;
 
         public uint nextClientID;
         public ConcurrentDictionary<TcpClient, uint> clientToID;
