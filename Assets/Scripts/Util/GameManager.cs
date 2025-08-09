@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Movement;
 using Network;
 using UnityEngine;
@@ -121,7 +122,7 @@ namespace Util
 
             roundShouldEnd = false;
             playerPointsScores = new Dictionary<uint, uint>();
-
+            Thread.Sleep(3500);
             serverHandler.netServer.SendMessage(MessagePacker.PackStringMsg("Step on the green pad to play!"));
 
             ready = true;
