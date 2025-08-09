@@ -286,7 +286,7 @@ namespace Network
             catch (Exception e)
             {
                 ///how did we get here
-                throw e;
+                //throw e;
                 return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
             }
         }

@@ -129,7 +129,7 @@ namespace Movement
                 {
                     cameraTransform = mainCamera.transform;
                     var camController = mainCamera.GetComponent<CameraController>();
-                    if (camController != null)
+                    if (camController != null && transform.position.y < 5000)
                     {
                         camController.target = transform;
                     }

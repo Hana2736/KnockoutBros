@@ -9,7 +9,7 @@ namespace Levels
     public class TreasureSpawner : MonoBehaviour
     {
         public GameObject onePt, threePt;
-        private float timer = 3f;
+        private float timer = 10f;
         private NetServer netServer;
         private uint nextBubbleId = 0;
         public void Start()

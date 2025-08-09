@@ -489,7 +489,7 @@ namespace Util
             }
 
             // Only freeze players if the next level is NOT the menu/lobby.
-            if (true)//newLevel != GameLevel.MenuLevel)
+            if (newLevel != GameLevel.MenuLevel)
             {
                 ready = false;
                 waitingForLoadedPlayers = true;
