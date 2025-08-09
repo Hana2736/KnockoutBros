@@ -44,20 +44,18 @@ namespace Network
                         NetClient.SendMsg(CreatePlayerUpdateMessage(NetClient.clientId));
                         break;
                     case NetServer.RunningMode.Server:
-                        {
-                            // FIX: Only send updates if the GameManager is in a stable state.
-                            if (!serverMsgHandler.gameManager.ready)
-                                break;
-
-                            foreach (var player in serverMsgHandler.gameManager.alivePlayerIds)
-                                netServer.SendMessageToAllBut(player, CreatePlayerUpdateMessage(player));
-
+                    {
+                        if (!serverMsgHandler.gameManager.ready)
                             break;
-                        }
+
+                        foreach (var player in serverMsgHandler.gameManager.alivePlayerIds)
+                            netServer.SendMessageToAllBut(player, CreatePlayerUpdateMessage(player));
+
+                        break;
+                    }
                 }
 
                 timeUntilNextTick = 1f / tickRate;
-
             }
 
             if (NetServer.BuiltRunningMode == NetServer.RunningMode.Server)
@@ -86,99 +84,99 @@ namespace Network
                 switch ((PacketTypes.PacketType)msg[0])
                 {
                     case PacketTypes.PacketType.SendClientIDMessage:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleClientIDMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleClientIDMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.AddPlayerMessage:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleAddPlayerMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleAddPlayerMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.StringMessage:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleStringMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleStringMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.PingMessage:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandlePingMsg(msg);
-                            else
-                                serverMsgHandler.HandlePingMsg(clientId, msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandlePingMsg(msg);
+                        else
+                            serverMsgHandler.HandlePingMsg(clientId, msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.PlayerUpdateMessage:
-                        {
-                            HandlePlayerUpdateMessage(
-                                NetServer.BuiltRunningMode == NetServer.RunningMode.Client ? 0 : clientId,
-                                msg);
-                            break;
-                        }
+                    {
+                        HandlePlayerUpdateMessage(
+                            NetServer.BuiltRunningMode == NetServer.RunningMode.Client ? 0 : clientId,
+                            msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.PlayerLoadedMessage:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Server)
-                                serverMsgHandler.HandlePlayerLoadedMsg();
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Server)
+                            serverMsgHandler.HandlePlayerLoadedMsg();
+                        break;
+                    }
                     case PacketTypes.PacketType.ChangeGameScene:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleLevelChangeMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleLevelChangeMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.PlayerQualifiedMessage:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleQualifiedPlayerMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleQualifiedPlayerMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.PlayerEliminatedMessage:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleEliminatedPlayerMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleEliminatedPlayerMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.SpawnCeilSpike:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleRainSpikeMsg(msg);
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleRainSpikeMsg(msg);
 
-                            break;
-                        }
+                        break;
+                    }
                     case PacketTypes.PacketType.SpawnWaterWave:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleSpawnWaveMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleSpawnWaveMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.SpawnBubble:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleAddBubbleMsg(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleAddBubbleMsg(msg);
+                        break;
+                    }
                     case PacketTypes.PacketType.RemoveBubble:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleRemoveBubbleMsg(msg);
-                            break;
-                        }
-                        case PacketTypes.PacketType.PlayerScoreUpdate:
-                        {
-                            if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
-                                clientMsgHandler.HandleScoreUpdate(msg);
-                            break;
-                        }
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleRemoveBubbleMsg(msg);
+                        break;
+                    }
+                    case PacketTypes.PacketType.PlayerScoreUpdate:
+                    {
+                        if (NetServer.BuiltRunningMode == NetServer.RunningMode.Client)
+                            clientMsgHandler.HandleScoreUpdate(msg);
+                        break;
+                    }
 
-                        /* case PacketTypes.PacketType.SecretKeyMessage:
-                        {
-                            HandleSecretKeyMsg(msg);
-                            break;
-                        } */
+                    /* case PacketTypes.PacketType.SecretKeyMessage:
+                    {
+                        HandleSecretKeyMsg(msg);
+                        break;
+                    } */
                 }
             }
         }
@@ -198,8 +196,6 @@ namespace Network
         }
 
 
-
-
         public void HandlePlayerUpdateMessage(uint clientId, byte[] msg)
         {
             var playerUpdData = MessagePacker.UnpackPlayerUpdateMsg(msg);
@@ -214,11 +210,9 @@ namespace Network
                 // CRITICAL FIX: We must first check if the player exists in the dictionary
                 // before we try to do anything with it.
                 if (!idToPlayers.ContainsKey(clientId))
-                {
                     // The message is from a player that was just destroyed during a level transition.
                     // We can safely ignore it.
                     return;
-                }
 
                 // Now that we know the player exists, we can safely check if they are in the 'alive' list.
                 if (!idToPlayers[clientId].parentGameManager.alivePlayerIds.Contains(clientId))
@@ -254,39 +248,41 @@ namespace Network
                 //Debug.LogWarning("Failed to unpack player update: "+e.Message);
             }
         }
+
         public byte[] CreatePlayerUpdateMessage(uint clientId)
         {
-            // Debug.Log("Trying to send an update for "+clientId);
-
-            // BULLETPROOF FIX: Add this check right at the top.
-            // If the player ID doesn't exist in the dictionary for any reason,
-            // we immediately stop and return an invalid packet instead of crashing.
-            if (!idToPlayers.ContainsKey(clientId))
+            try
             {
+                if (!idToPlayers.TryGetValue(clientId, out var playerCode))
+                    return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
+
+                if (!playerCode.readyForUpdates)
+                    return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
+
+                var position = playerCode.transform.position;
+                var rotation = playerCode.transform.eulerAngles;
+                var updTemplate = new MessagePacker.PlayerUpdateMessage
+                {
+                    playerID = clientId,
+                    positionX = position.x,
+                    positionY = position.y,
+                    positionZ = position.z,
+                    rotationX = rotation.x,
+                    rotationY = rotation.y,
+                    rotationZ = rotation.z,
+                    animId = playerCode.currentAnim,
+                    skipTickReason = (byte)playerCode.skipTick // Add this line
+                };
+
+
+                return MessagePacker.PackPlayerUpdateMsg(updTemplate);
+            }
+            catch (Exception e)
+            {
+                ///how did we get here
+                throw e;
                 return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
             }
-
-            var playerCode = idToPlayers[clientId];
-            if (!playerCode.readyForUpdates)
-                return new byte[] { (byte)PacketTypes.PacketType.InvalidPacket, 0x00, 0x00, 0x00, 0x00 };
-
-            var position = playerCode.transform.position;
-            var rotation = playerCode.transform.eulerAngles;
-            var updTemplate = new MessagePacker.PlayerUpdateMessage
-            {
-                playerID = clientId,
-                positionX = position.x,
-                positionY = position.y,
-                positionZ = position.z,
-                rotationX = rotation.x,
-                rotationY = rotation.y,
-                rotationZ = rotation.z,
-                animId = playerCode.currentAnim,
-                skipTickReason = (byte)playerCode.skipTick // Add this line
-            };
-
-
-            return MessagePacker.PackPlayerUpdateMsg(updTemplate);
         }
     }
 }

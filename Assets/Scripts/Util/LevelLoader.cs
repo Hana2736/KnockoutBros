@@ -6,11 +6,13 @@ namespace Util
     {
         public static GameObject parentForItems;
         public static GameManager.GameLevel currLevel;
+
         public GameObject MenuLevelWorldPrefab,
             RaceLevelWorldPrefab,
             SurvivalLevelWorldPrefab,
             PointsLevelWorldPrefab,
-            FinalLevelWorldPrefab;
+            FinalLevelWorldPrefab,
+            ScoreBannerGui;
 
         public AudioClip menuSong, raceSong, surviveSong;
         
@@ -20,7 +22,7 @@ namespace Util
         {
             var worldLevel = GameObject.Find("WorldLevel");
             Destroy(worldLevel);
-
+            ScoreBannerGui.SetActive(newLevel == GameManager.GameLevel.PointsLevel);
             GameObject newLevelToBuildPrefab = null;
             switch (newLevel)
             {

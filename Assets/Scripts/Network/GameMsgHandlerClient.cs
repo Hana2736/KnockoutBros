@@ -79,13 +79,13 @@ namespace Network
             // Hello Msg
             if (msg.Length != 5)
             {
-                var text = GameObject.Find("TestText").GetComponent<TMP_Text>();
-                text.text += '\n' + MessagePacker.UnpackStringMsg(msg);
+                var text = GameObject.Find("ServerMsgString").GetComponent<TMP_Text>();
+                text.text = MessagePacker.UnpackStringMsg(msg);
                 return;
             }
 
-            Console.WriteLine("key is recovered!");
-            NetClient.keyRecovered = true;
+            //Console.WriteLine("key is recovered!");
+            //NetClient.keyRecovered = true;
         }
 
         public void HandlePingMsg(byte[] msg)
@@ -278,7 +278,8 @@ namespace Network
         internal void HandleScoreUpdate(byte[] msg)
         {
             uint newScore = MessagePacker.UnpackPlayerScoreUpdateMessage(msg);
-            Debug.Log("New Score: " + newScore);
+            var text = GameObject.Find("ScoreMsgString").GetComponent<TMP_Text>();
+            text.text = "Score: " + newScore + " / 20";
         }
     }
 }

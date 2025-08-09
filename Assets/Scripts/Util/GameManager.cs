@@ -218,14 +218,25 @@ namespace Util
                 MessagePacker.PackPlayerScoreUpdateMessage(playerPointsScores[playerId]));
         }
 
+        private uint lastSecondCountdown = 16;
+        private uint lastPlayersQualSent = 9999;
         public void UpdateInFreeStage()
         {
             AddNewPlayers();
-            if (readyPlayers.Count > 0 && !startMatching) startMatching = true;
+            if (readyPlayers.Count > 0 && !startMatching)
+            {
+                startMatching = true;
+                levelTimeRemaining = 15f;
+            }
 
             if (startMatching)
             {
                 levelTimeRemaining -= Time.deltaTime;
+                if (lastSecondCountdown != (uint)levelTimeRemaining)
+                {
+                    serverHandler.netServer.SendMessage(MessagePacker.PackStringMsg("Starting in "+(uint)levelTimeRemaining));
+                    lastSecondCountdown = (uint)levelTimeRemaining;
+                }
                 if (levelTimeRemaining > 0f)
                     return;
                 startMatching = false;
@@ -249,11 +260,13 @@ namespace Util
 
         public void UpdateInRaceStage()
         {
+            SendPlayersCountMsg("Players finished: ", (uint)qualifiedPlayerIds.Count);
             CheckIfQualEnd();
         }
 
         public void UpdateInPointsStage()
         {
+            SendPlayersCountMsg("Players finished: ", (uint)qualifiedPlayerIds.Count);
             foreach (var playerScores in playerPointsScores)
             {
                 if (!alivePlayerIds.Contains(playerScores.Key))
@@ -283,12 +296,22 @@ namespace Util
         public void UpdateInSurvivalStage()
         {
             //Debug.Log("Alive: " + alivePlayerIds.Count+", Wanted Remaining: "+playersPassExpectedThisRound);
+            SendPlayersCountMsg("Players to knock out: ", (uint)(targetPlayerCount - playersPassExpectedThisRound - alivePlayerIds.Count));
             if (alivePlayerIds.Count > playersPassExpectedThisRound)
                 return;
             foreach (var playerId in alivePlayerIds.ToList())
                 // qualify everyone left behind
                 OnPlayerQualify(playerId);
             roundShouldEnd = true;
+        }
+
+        public void SendPlayersCountMsg(string prefix, uint number)
+        {
+            if (lastPlayersQualSent != alivePlayerIds.Count)
+            {
+                serverHandler.netServer.SendMessage(MessagePacker.PackStringMsg(prefix+number));
+                lastPlayersQualSent = number;
+            }
         }
 
         public void CheckIfQualEnd()
