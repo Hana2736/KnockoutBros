@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Movement;
 using UnityEngine;
 
@@ -183,6 +184,15 @@ namespace Network
 
         public PlayerHandler AddNewPlayer(uint clientId)
         {
+            try
+            {
+                if (idToPlayers.ContainsKey(clientId) && idToPlayers[clientId].gameObject.activeSelf)
+                    return idToPlayers[clientId];
+            }
+            catch (Exception e)
+            {
+            }
+
             var newPlayerObj = Instantiate(playerPrefab, new Vector3(0f, 999999f, 0f), Quaternion.identity);
             var newPlayerCode = newPlayerObj.GetComponent<PlayerHandler>();
             newPlayerCode.skipTick = PlayerHandler.SkipTickReason.Loading;

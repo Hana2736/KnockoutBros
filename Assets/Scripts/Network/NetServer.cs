@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
+using Util;
 
 namespace Network
 {
@@ -15,7 +16,7 @@ namespace Network
             Client
         }
 
-        public static readonly RunningMode BuiltRunningMode = RunningMode.Server;
+        public static readonly RunningMode BuiltRunningMode = RunningMode.Client;
 
         public uint nextClientID;
         public ConcurrentDictionary<TcpClient, uint> clientToID;
@@ -27,6 +28,8 @@ namespace Network
 
         public ConcurrentQueue<uint> newClientsForGame;
         public ConcurrentDictionary<uint, Guid> secretKeys;
+
+        public GameManager gameManager;
         
 
 
@@ -34,6 +37,7 @@ namespace Network
         {
             if (BuiltRunningMode != RunningMode.Server)
                 return;
+            
             StartServer();
         }
 
@@ -48,7 +52,7 @@ namespace Network
             messageSendQueue = new ConcurrentDictionary<uint, ConcurrentQueue<byte[]>>();
             newClientsForGame = new ConcurrentQueue<uint>();
 
-            var tcpListener = new TcpListener(IPAddress.Parse("10.119.200.30"), 2735);
+            var tcpListener = new TcpListener(new IPEndPoint(IPAddress.Any, 2735));
             new Thread(() =>
             {
                 tcpListener.Start();
@@ -181,7 +185,21 @@ namespace Network
             messageSendQueue[clientId].Enqueue(MessagePacker.PackSendClientIDMessage(clientId));
             new Thread(() => { ProcessIncoming(client, messageRecvQueue[clientId], clientId); }).Start();
             new Thread(() => { ProcessOutgoing(client, messageSendQueue[clientId], clientId); }).Start();
-            newClientsForGame.Enqueue(clientId);
+            
+            if (gameManager.currentRoundType == GameManager.RoundType.Free)
+            {
+                newClientsForGame.Enqueue(clientId);
+            }
+            else
+            {
+                gameManager.pendingPlayers.Enqueue(clientId);
+                SendMessage(clientId, MessagePacker.PackChangeGameSceneMsg(new MessagePacker.NewGameLevelMessage
+                {
+                    GameLevel = gameManager.currentLevel,
+                    RoundType = gameManager.currentRoundType
+                }));
+            }
+
         }
 
         public void SendMessage(uint clientId, byte[] msgData)

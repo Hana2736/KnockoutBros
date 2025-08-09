@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using Util;
+using Object = System.Object;
 
 namespace Movement
 {
@@ -27,8 +28,8 @@ namespace Movement
         private float pitch = 0.0f; // Rotation around the X axis (up/down)
 
         public Animation fallbackPath;
-        
-        
+
+        public InGameGUIMgr uiMgr;
         
         
         // Velocity reference for SmoothDamp
@@ -41,21 +42,35 @@ namespace Movement
             Cursor.visible = false;
             fallbackPath = GetComponent<Animation>();
             playingLevel = GameManager.GameLevel.NullLevel;
+            uiMgr = FindAnyObjectByType<InGameGUIMgr>();
+            timeSpectating = 0;
+            isShowingSpectateLabel = false;
         }
 
+        private float timeSpectating = 0f;
         private Util.GameManager.GameLevel playingLevel;
+
+        private bool isShowingSpectateLabel;
         // LateUpdate is called after all Update functions.
         // This is the best place for camera logic to avoid jitter.
         void LateUpdate()
         {
             if (target == null || !target.gameObject.activeSelf)
             {
-                if(fallbackPath.isPlaying && LevelLoader.currLevel == playingLevel)
-                    return;
+               
                 playingLevel = LevelLoader.currLevel;
                 //Debug.LogWarning("Camera Controller has no target assigned.");
                 try
                 {
+                    timeSpectating += Time.deltaTime;
+                    if (!isShowingSpectateLabel && timeSpectating > 2.5f)
+                    {
+                        uiMgr.ShowSpectateBanner();
+                        isShowingSpectateLabel = true;
+                    }
+                        
+                    if(fallbackPath.isPlaying && LevelLoader.currLevel == playingLevel)
+                        return;
                     fallbackPath.Play(playingLevel == GameManager.GameLevel.RaceLevel ? "RaceLevelPath" : "SurvivalPath");
                 }
                 catch (Exception e)
@@ -66,6 +81,12 @@ namespace Movement
                 return;
             }
 
+            timeSpectating = 0;
+            if (isShowingSpectateLabel)
+            {
+                isShowingSpectateLabel = false;
+                uiMgr.HideSpectateBanner();
+            }
             fallbackPath.Stop();
 
             // --- Handle Mouse Input for Rotation ---

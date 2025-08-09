@@ -6,8 +6,9 @@ using UnityEngine.UI;
 public class InGameGUIMgr : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    public GameObject qualElimBanner;
+    public GameObject qualElimBanner, spectatingBanner;
     public Texture qualBanner, elimBanner;
+    
     void Start()
     {
         if(NetServer.BuiltRunningMode != NetServer.RunningMode.Client)
@@ -33,5 +34,15 @@ public class InGameGUIMgr : MonoBehaviour
     public void HideBanner()
     {
         qualElimBanner.SetActive(false);
+    }
+
+    public void ShowSpectateBanner()
+    {
+        spectatingBanner.SetActive(true);
+    }
+
+    public void HideSpectateBanner()
+    {
+        spectatingBanner.SetActive(false);
     }
 }

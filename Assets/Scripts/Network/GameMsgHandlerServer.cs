@@ -23,6 +23,7 @@ namespace Network
             if (NetServer.BuiltRunningMode != NetServer.RunningMode.Server)
                 return;
             gameManager = gameObject.AddComponent<GameManager>();
+            netServer.gameManager = gameManager;
             gameManager.serverHandler = this;
             msgHandlerCommon = GetComponent<GameMsgHandlerCommon>();
             

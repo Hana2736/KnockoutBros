@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using Movement;
@@ -17,15 +16,17 @@ namespace Network
         public GameObject CeilingSpikePrefab, bubble1Prefab, bubble3Prefab;
 
         public RawImage loadingScreen;
-        public Texture2D raceLoad, surviveLoad, ptsLoad, finalLoad, titleLoad;
-        private PingSender pingSender;
+        public Texture2D raceLoad, surviveLoad, ptsLoad, finalLoad, titleLoad, winLoad;
 
 
         public GameObject wavePrefab; // <-- Add this field and assign it in the Inspector
+        private PingSender pingSender;
         private List<Vector3[]> wavePaths;
+
+        private bool weWon;
+
         private void Start()
         {
-
             pingSender = GetComponent<PingSender>();
             msgHandlerCommon = GetComponent<GameMsgHandlerCommon>();
             LevelLoader = GetComponent<LevelLoader>();
@@ -34,43 +35,53 @@ namespace Network
         }
 
 
-        void InitializeWavePaths()
+        private void InitializeWavePaths()
         {
             wavePaths = new List<Vector3[]>();
-            wavePaths.Add(new Vector3[] { new Vector3(0, -0.88f, -19.5f), new Vector3(0, -0.21f, -17.87f), new Vector3(0, -0.21f, 17.87f), new Vector3(0, -0.88f, 19.5f) });
-            wavePaths.Add(new Vector3[] { new Vector3(0, -0.88f, 19.5f), new Vector3(0, -0.21f, 17.87f), new Vector3(0, -0.21f, -17.87f), new Vector3(0, -0.88f, -19.5f) });
-            wavePaths.Add(new Vector3[] { new Vector3(-19.5f, -0.88f, 0), new Vector3(-17.87f, -0.21f, 0), new Vector3(17.87f, -0.21f, 0), new Vector3(19.5f, -0.88f, 0) });
-            wavePaths.Add(new Vector3[] { new Vector3(19.5f, -0.88f, 0), new Vector3(17.87f, -0.21f, 0), new Vector3(-17.87f, -0.21f, 0), new Vector3(-19.5f, -0.88f, 0) });
+            wavePaths.Add(new[]
+            {
+                new Vector3(0, -0.88f, -19.5f), new Vector3(0, -0.21f, -17.87f), new Vector3(0, -0.21f, 17.87f),
+                new Vector3(0, -0.88f, 19.5f)
+            });
+            wavePaths.Add(new[]
+            {
+                new Vector3(0, -0.88f, 19.5f), new Vector3(0, -0.21f, 17.87f), new Vector3(0, -0.21f, -17.87f),
+                new Vector3(0, -0.88f, -19.5f)
+            });
+            wavePaths.Add(new[]
+            {
+                new Vector3(-19.5f, -0.88f, 0), new Vector3(-17.87f, -0.21f, 0), new Vector3(17.87f, -0.21f, 0),
+                new Vector3(19.5f, -0.88f, 0)
+            });
+            wavePaths.Add(new[]
+            {
+                new Vector3(19.5f, -0.88f, 0), new Vector3(17.87f, -0.21f, 0), new Vector3(-17.87f, -0.21f, 0),
+                new Vector3(-19.5f, -0.88f, 0)
+            });
         }
 
 
         public void HandleSpawnWaveMsg(byte[] msg)
         {
             var waveData = MessagePacker.UnpackNewWaveMessage(msg);
-            int pathIndex = waveData.pathIndex;
-            float speed = waveData.speed;
+            var pathIndex = waveData.pathIndex;
+            var speed = waveData.speed;
 
             if (pathIndex < 0 || pathIndex >= wavePaths.Count) return;
 
-            Vector3[] selectedPath = wavePaths[pathIndex];
-            Quaternion waveRotation = Quaternion.identity;
+            var selectedPath = wavePaths[pathIndex];
+            var waveRotation = Quaternion.identity;
 
-            if (pathIndex == 2 || pathIndex == 3)
-            {
-                waveRotation = Quaternion.Euler(0, 90, 0);
-            }
+            if (pathIndex == 2 || pathIndex == 3) waveRotation = Quaternion.Euler(0, 90, 0);
 
-            GameObject waveInstance = Instantiate(wavePrefab, selectedPath[0], waveRotation, new InstantiateParameters()
+            var waveInstance = Instantiate(wavePrefab, selectedPath[0], waveRotation, new InstantiateParameters
             {
-                parent = Util.LevelLoader.parentForItems.transform,
+                parent = LevelLoader.parentForItems.transform,
                 worldSpace = true
             });
 
-            WaveMove waveMoveScript = waveInstance.GetComponent<WaveMove>();
-            if (waveMoveScript != null)
-            {
-                waveMoveScript.Initialize(selectedPath, speed);
-            }
+            var waveMoveScript = waveInstance.GetComponent<WaveMove>();
+            if (waveMoveScript != null) waveMoveScript.Initialize(selectedPath, speed);
         }
 
 
@@ -81,7 +92,6 @@ namespace Network
             {
                 var text = GameObject.Find("ServerMsgString").GetComponent<TMP_Text>();
                 text.text = MessagePacker.UnpackStringMsg(msg);
-                return;
             }
 
             //Console.WriteLine("key is recovered!");
@@ -120,14 +130,20 @@ namespace Network
         public void HandleAddPlayerMsg(byte[] msg)
         {
             var playerId = MessagePacker.UnpackAddPlayerMessage(msg);
-            msgHandlerCommon.AddNewPlayer(playerId);
+            if (!msgHandlerCommon.idToPlayers.ContainsKey(playerId) ||
+                !msgHandlerCommon.idToPlayers[playerId].gameObject.activeSelf) msgHandlerCommon.AddNewPlayer(playerId);
         }
 
         public void HandleQualifiedPlayerMsg(byte[] msg)
         {
             var playerId = MessagePacker.UnpackPlayerQualifiedMessage(msg);
             var playerCode = msgHandlerCommon.idToPlayers[playerId];
-            if (playerId == NetClient.clientId) guiMgr.UpdateGuiWeQualified();
+            if (playerId == NetClient.clientId)
+            {
+                guiMgr.UpdateGuiWeQualified();
+                weWon = LevelLoader.currLevel == GameManager.GameLevel.FinalLevel;
+            }
+
             StartCoroutine(PlayOutQualAnim(playerCode));
             Debug.Log("Qualified: " + playerId);
         }
@@ -144,10 +160,7 @@ namespace Network
 
             // FIX: After the wait, check if the player object still exists before trying to use it.
             // It might have been destroyed by a level transition.
-            if (playerCode != null && playerCode.gameObject != null)
-            {
-                playerCode.gameObject.SetActive(false);
-            }
+            if (playerCode != null && playerCode.gameObject != null) playerCode.gameObject.SetActive(false);
         }
 
         public IEnumerator PlayOutElimAnim(PlayerHandler playerCode)
@@ -161,10 +174,7 @@ namespace Network
             yield return new WaitForSeconds(1.7833333f);
 
             // FIX: Add the same null check here.
-            if (playerCode != null && playerCode.gameObject != null)
-            {
-                playerCode.gameObject.SetActive(false);
-            }
+            if (playerCode != null && playerCode.gameObject != null) playerCode.gameObject.SetActive(false);
         }
 
         public void HandleRainSpikeMsg(byte[] msg)
@@ -174,7 +184,7 @@ namespace Network
                 Quaternion.identity,
                 new InstantiateParameters
                 {
-                    parent = Util.LevelLoader.parentForItems.transform,
+                    parent = LevelLoader.parentForItems.transform,
                     worldSpace = true
                 });
         }
@@ -184,7 +194,11 @@ namespace Network
         {
             var playerId = MessagePacker.UnpackPlayerEliminatedMessage(msg);
             var playerCode = msgHandlerCommon.idToPlayers[playerId];
-            if (playerId == NetClient.clientId) guiMgr.UpdateGuiWeEliminated();
+            if (playerId == NetClient.clientId)
+            {
+                weWon = false;
+                guiMgr.UpdateGuiWeEliminated();
+            }
             StartCoroutine(PlayOutElimAnim(playerCode));
             Debug.Log("Eliminated: " + playerId);
         }
@@ -197,8 +211,8 @@ namespace Network
         private IEnumerator DoSceneChangeWork(byte[] msg)
         {
             var nextConfig = MessagePacker.UnpackChangeGameSceneMsg(msg);
-            
-            
+
+
             // 1. Set the correct loading screen texture and show it.
             switch (nextConfig.GameLevel)
             {
@@ -215,27 +229,25 @@ namespace Network
                     loadingScreen.texture = finalLoad;
                     break;
                 case GameManager.GameLevel.MenuLevel:
-                    loadingScreen.texture = titleLoad;
+                    loadingScreen.texture = weWon ? winLoad : titleLoad;
                     break;
             }
-            
+
 
             // 2. Eradicate all existing player objects on the client.
             foreach (var player in msgHandlerCommon.idToPlayers.Values)
-            {
                 if (player != null)
                 {
                     player.gameObject.SetActive(false);
                     Destroy(player.gameObject);
                 }
-            }
+
             msgHandlerCommon.idToPlayers.Clear();
 
-            if(LevelLoader.currLevel != GameManager.GameLevel.MenuLevel)
+            if (LevelLoader.currLevel != GameManager.GameLevel.MenuLevel)
                 yield return new WaitForSeconds(3.5f);
-            
-            
-            
+
+
             // 3. Load the new level scenery. The server will re-add players.
             LevelLoader.LoadLevel(nextConfig.GameLevel);
             loadingScreen.enabled = true;
@@ -250,42 +262,36 @@ namespace Network
 
             // 6. Hide the loading screen. The player is still frozen at this point.
             loadingScreen.enabled = false;
-
-            // 7. The client's job is done. It now waits for the server to send an update
-            // that changes the player's SkipTickReason from 'Loading' to 'None', which will
-            // happen after all other players have loaded and the 5-second countdown ends.
         }
 
         public void HandleAddBubbleMsg(byte[] msg)
         {
             var bubbleData = MessagePacker.UnPackNewBubbleMessage(msg);
             var bubbType = bubbleData.bubbleScore == 3 ? bubble3Prefab : bubble1Prefab;
-            var newBubb = Instantiate(bubbType, new Vector3(bubbleData.posX, bubbleData.posY, bubbleData.posZ), Quaternion.identity, new InstantiateParameters
-            {
-                parent = LevelLoader.parentForItems.transform,
-                worldSpace = true
-            });
+            var newBubb = Instantiate(bubbType, new Vector3(bubbleData.posX, bubbleData.posY, bubbleData.posZ),
+                Quaternion.identity, new InstantiateParameters
+                {
+                    parent = LevelLoader.parentForItems.transform,
+                    worldSpace = true
+                });
             newBubb.GetComponent<BubbleID>().bubbleId = bubbleData.bubbleId;
         }
 
         internal void HandleRemoveBubbleMsg(byte[] msg)
         {
-            uint bubbleId = MessagePacker.UnpackRemoveBubbleMessage(msg);
-            var allBubbles = GameObject.FindObjectsByType<BubbleID>(FindObjectsSortMode.None);
+            var bubbleId = MessagePacker.UnpackRemoveBubbleMessage(msg);
+            var allBubbles = FindObjectsByType<BubbleID>(FindObjectsSortMode.None);
             foreach (var bubble in allBubbles)
-            {
                 if (bubble.GetComponent<BubbleID>().bubbleId == bubbleId)
                 {
                     Destroy(bubble.gameObject);
                     return;
                 }
-            }
-
         }
 
         internal void HandleScoreUpdate(byte[] msg)
         {
-            uint newScore = MessagePacker.UnpackPlayerScoreUpdateMessage(msg);
+            var newScore = MessagePacker.UnpackPlayerScoreUpdateMessage(msg);
             var text = GameObject.Find("ScoreMsgString").GetComponent<TMP_Text>();
             text.text = "Score: " + newScore + " / 20";
         }

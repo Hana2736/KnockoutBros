@@ -34,7 +34,7 @@ namespace Movement
         public float inputZ;
         public bool jumpKey;
         public bool diveKey;
-
+        
         public int currentAnim;
         public bool localPlayer;
         public Rigidbody myRb;
@@ -64,7 +64,7 @@ namespace Movement
         public float lastPakUpdate;
         private Collider myCol;
         private bool skipTickWaitingAlready;
-
+        private CameraController camController = null;
         public bool haveWeStartedYet;
 
         public void Start()
@@ -78,6 +78,18 @@ namespace Movement
             readyForUpdates = true;
             myBotController = GetComponent<BotController>();
             myAnim = GetComponent<Animator>();
+            if (localPlayer && !isBotPlayer)
+            {
+                var mainCamera = Camera.main;
+                if (mainCamera != null)
+                {
+                    cameraTransform = mainCamera.transform;
+                    camController = mainCamera.GetComponent<CameraController>();
+                    
+                    
+                }
+            }
+            
             if (!isBotPlayer)
                 Destroy(myBotController);
             else
@@ -115,29 +127,16 @@ namespace Movement
         public void Update()
         {
 
+            if (camController != null && transform.position.y < 100)
+            {
+                camController.target = transform;
+            }
             if (LevelLoader.currLevel == GameManager.GameLevel.MenuLevel)
             {
                 if (isBotPlayer)
                     Destroy(this.gameObject);
                 if (transform.position.y > 100 && localPlayer)
                     transform.position = new Vector3(0, 2, 0);
-            }
-            if (localPlayer && !isBotPlayer && cameraTransform == null)
-            {
-                var mainCamera = Camera.main;
-                if (mainCamera != null)
-                {
-                    cameraTransform = mainCamera.transform;
-                    var camController = mainCamera.GetComponent<CameraController>();
-                    if (camController != null && transform.position.y < 5000)
-                    {
-                        camController.target = transform;
-                    }
-                }
-                else
-                {
-                    return;
-                }
             }
 
             if (globalSkipCalc)
